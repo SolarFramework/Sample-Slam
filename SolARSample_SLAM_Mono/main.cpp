@@ -27,6 +27,7 @@
 // ADD COMPONENTS HEADERS HERE
 #include "api/input/devices/ICamera.h"
 #include "api/image/IImageFilter.h"
+#include "api/features/IDescriptorsExtractorFromImage.h"
 #include "api/features/IKeypointDetector.h"
 #include "api/features/IDescriptorsExtractor.h"
 #include "api/storage/IMapManager.h"
@@ -100,6 +101,8 @@ int main(int argc, char **argv) {
 		auto  keypointsDetector = xpcfComponentManager->resolve<features::IKeypointDetector>();
 		LOG_INFO("Resolving descriptor extractor");
 		auto descriptorExtractor = xpcfComponentManager->resolve<features::IDescriptorsExtractor>();
+        LOG_INFO("Resolving descriptor extractor");
+        auto descriptorExtractorFromImage = xpcfComponentManager->resolve<features::IDescriptorsExtractorFromImage>();
 		LOG_INFO("Resolving image viewer");
 		auto imageViewer = xpcfComponentManager->resolve<display::IImageViewer>();
 		LOG_INFO("Resolving viewer3D points");
@@ -253,11 +256,16 @@ int main(int argc, char **argv) {
             {
                 filteredView = view;
             }
-            // feature extraction
-            keypointsDetector->detect(filteredView, keypoints);
-			if (keypoints.size() == 0)
-				continue;
-            descriptorExtractor->extract(filteredView, keypoints, descriptors);
+            // feature extraction (use directly a descriptor extractor from image if defined in the configuration file
+            if (descriptorExtractorFromImage)
+                descriptorExtractorFromImage->extract(filteredView, keypoints, descriptors);
+            else
+            {
+                keypointsDetector->detect(filteredView, keypoints);
+                if (keypoints.size() == 0)
+                    continue;
+                descriptorExtractor->extract(filteredView, keypoints, descriptors);
+            }
 			// undistort keypoints
 			undistortKeypoints->undistort(keypoints, undistortedKeypoints);
             frame = xpcf::utils::make_shared<Frame>(keypoints, undistortedKeypoints, descriptors, filteredView);
@@ -266,7 +274,7 @@ int main(int argc, char **argv) {
 				// used for display
 				framePoses.push_back(frame->getPose());
 				// draw cube
-                overlay3D->draw(frame->getPose(), view);
+                overlay3D->draw(frame->getPose(), displayImage);
 				// mapping
 				if (mapping->process(frame, keyframe) == FrameworkReturnCode::_SUCCESS) {
 					LOG_DEBUG("New keyframe id: {}", keyframe->getId());
@@ -318,7 +326,7 @@ int main(int argc, char **argv) {
 			count++;
 
 			// display matches and a cube on the origin of coordinate system
-            if (imageViewer->display(view) == FrameworkReturnCode::_STOP)
+            if (imageViewer->display(displayImage) == FrameworkReturnCode::_STOP)
 				break;
 
 			// display point cloud
