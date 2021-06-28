@@ -3,12 +3,12 @@
 
 #if _WIN32
 #ifdef SolARPipeline_SLAM_API_DLLEXPORT
-#define SOLARPIPELINESLAM_EXPORT_API __declspec(dllexport)
-#else //SOLARPIPELINEFIDUCIALMARKER_API_DLLEXPORT
-#define SOLARPIPELINESLAM_EXPORT_API __declspec(dllimport)
-#endif //SOLARPIPELINEFIDUCIALMARKER_API_DLLEXPORT
+#define SOLARPIPELINE_SLAM_EXPORT_API __declspec(dllexport)
+#else //SolARPipeline_SLAM_API_DLLEXPORT
+#define SOLARPIPELINE_SLAM_EXPORT_API __declspec(dllimport)
+#endif //SolARPipeline_SLAM_API_DLLEXPORT
 #else //_WIN32
-#define SOLARPIPELINESLAM_EXPORT_API
+#define SOLARPIPELINE_SLAM_EXPORT_API
 #endif //_WIN32
 
 #include "xpcf/core/traits.h"
@@ -87,7 +87,7 @@ namespace PIPELINES {
  *
  */
 
-class SOLARPIPELINESLAM_EXPORT_API PipelineSlam : public org::bcom::xpcf::ConfigurableBase,
+class SOLARPIPELINE_SLAM_EXPORT_API PipelineSlam : public org::bcom::xpcf::ConfigurableBase,
     public api::pipeline::IPoseEstimationPipeline
 {
 public:
