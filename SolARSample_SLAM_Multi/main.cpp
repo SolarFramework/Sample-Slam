@@ -146,14 +146,14 @@ int main(int argc, char **argv) {
 				return true;
 		};
 
-		xpcf::DropBuffer<SRef<Image>>												m_dropBufferCamImageCapture;
-		xpcf::DropBuffer<SRef<Image>>												m_dropBufferCamImageCaptureBootstrap;
+		xpcf::DropBuffer<SRef<Image>>												m_dropBufferCamImageCapture;		
 		xpcf::DropBuffer<SRef<Frame>>												m_dropBufferAddKeyframe;
 		xpcf::DropBuffer<SRef<Keyframe>>											m_dropBufferNewKeyframe;
 		xpcf::DropBuffer<SRef<Keyframe>>											m_dropBufferNewKeyframeLoop;
 		xpcf::DropBuffer<SRef<Image>>												m_dropBufferDisplay;
 		xpcf::DropBuffer< std::pair<SRef<Image>, std::vector<Keypoint>>>			m_dropBufferKeypoints;
-		xpcf::DropBuffer<SRef<Frame>>												m_dropBufferFrameDescriptors;
+		xpcf::DropBuffer<SRef<Frame>>												m_dropBufferFrameTracking;
+		xpcf::DropBuffer<SRef<Frame>>												m_dropBufferFrameBootstrap;
 		bool stop = false;
 		bool bootstrapOk = false;
 		SRef<Keyframe> keyframe2;
@@ -214,36 +214,8 @@ int main(int argc, char **argv) {
 				stop = true;
 				return;
 			}
-			if (bootstrapOk)
-				m_dropBufferCamImageCapture.push(view);
-			else
-				m_dropBufferCamImageCaptureBootstrap.push(view);
-		};
-
-		// Bootstrap task
-		auto fnBootstrap = [&]()
-		{
-			SRef<Image> image;
-			if (bootstrapOk || !m_dropBufferCamImageCaptureBootstrap.tryPop(image)) {
-				xpcf::DelegateTask::yield();
-				return;
-			}
-			SRef<Image> view;
-			Transform3Df pose = Transform3Df::Identity();
-			fiducialMarkerPoseEstimator->estimate(image, pose);
-			if (bootstrapper->process(image, view, pose) == FrameworkReturnCode::_SUCCESS) {
-				double bundleReprojError = bundler->bundleAdjustment(calibration, distortion);
-				keyframesManager->getKeyframe(1, keyframe2);
-				tracking->updateReferenceKeyframe(keyframe2);
-				framePoses.push_back(keyframe2->getPose());
-				LOG_INFO("Number of initial point cloud: {}", pointCloudManager->getNbPoints());
-				LOG_INFO("Number of initial keyframes: {}", keyframesManager->getNbKeyframes());
-				bootstrapOk = true;
-			}
-			if (!pose.isApprox(Transform3Df::Identity()))
-				overlay3D->draw(pose, view);
-			m_dropBufferDisplay.push(view);
-		};
+			m_dropBufferCamImageCapture.push(view);			
+		};		
 
 		// Keypoint detection task
 		auto fnDetection = [&]()
@@ -273,14 +245,43 @@ int main(int argc, char **argv) {
 				descriptorExtractor->extract(frameKeypoints.first, frameKeypoints.second, descriptors);
 			}
 			SRef<Frame> frame = xpcf::utils::make_shared<Frame>(frameKeypoints.second, undistortedKeypoints, descriptors, frameKeypoints.first);
-			m_dropBufferFrameDescriptors.push(frame);
+			if (bootstrapOk)
+				m_dropBufferFrameTracking.push(frame);
+			else
+				m_dropBufferFrameBootstrap.push(frame);
+		};
+
+		// Bootstrap task
+		auto fnBootstrap = [&]()
+		{
+			SRef<Frame> frame;
+			if (bootstrapOk || !m_dropBufferFrameBootstrap.tryPop(frame)) {
+				xpcf::DelegateTask::yield();
+				return;
+			}
+			SRef<Image> view;
+			Transform3Df pose = Transform3Df::Identity();
+			fiducialMarkerPoseEstimator->estimate(frame->getView(), pose);
+			frame->setPose(pose);
+			if (bootstrapper->process(frame, view) == FrameworkReturnCode::_SUCCESS) {
+				double bundleReprojError = bundler->bundleAdjustment(calibration, distortion);
+				keyframesManager->getKeyframe(1, keyframe2);
+				tracking->updateReferenceKeyframe(keyframe2);
+				framePoses.push_back(keyframe2->getPose());
+				LOG_INFO("Number of initial point cloud: {}", pointCloudManager->getNbPoints());
+				LOG_INFO("Number of initial keyframes: {}", keyframesManager->getNbKeyframes());
+				bootstrapOk = true;
+			}
+			if (!pose.isApprox(Transform3Df::Identity()))
+				overlay3D->draw(pose, view);
+			m_dropBufferDisplay.push(view);
 		};
 
 		// Tracking task		
 		auto fnTracking = [&]()
 		{
 			SRef<Frame> frame;
-			if (!bootstrapOk || !m_dropBufferFrameDescriptors.tryPop(frame)) {
+			if (!bootstrapOk || !m_dropBufferFrameTracking.tryPop(frame)) {
 				xpcf::DelegateTask::yield();
 				return;
 			}

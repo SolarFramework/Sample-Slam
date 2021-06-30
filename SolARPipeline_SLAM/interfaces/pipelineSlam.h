@@ -191,7 +191,7 @@ private:
 
 	// SLAM variables
     datastructure::Transform3Df							m_pose;
-	SRef<datastructure::Image>							m_camImage;
+	SRef<datastructure::Frame>							m_frame;
 	datastructure::Transform3Df                         m_poseFrame;
     SRef<datastructure::Keyframe>                       m_keyframe1, m_keyframe2;
 	bool												m_bootstrapOk = false;
@@ -205,10 +205,10 @@ private:
 	double												m_bundleReprojError;
 	std::mutex											m_mutexMapping;
 
-	xpcf::DropBuffer< SRef<datastructure::Image>>		m_CameraImagesBuffer;
-	xpcf::DropBuffer< SRef<datastructure::Image>>		m_CameraImagesBootstrapBuffer;
+	xpcf::DropBuffer< SRef<datastructure::Image>>		m_CameraImagesBuffer;	
 	xpcf::DropBuffer< std::pair< SRef<datastructure::Image>, std::vector<datastructure::Keypoint> >> m_keypointsBuffer;
-	xpcf::DropBuffer< SRef<datastructure::Frame >>		m_descriptorsBuffer;
+	xpcf::DropBuffer< SRef<datastructure::Frame >>		m_frameBuffer;
+	xpcf::DropBuffer< SRef<datastructure::Frame>>		m_frameBootstrapBuffer;
 	xpcf::DropBuffer<SRef<datastructure::Frame>>		m_addKeyframeBuffer;
 	xpcf::DropBuffer<SRef<datastructure::Keyframe>>		m_newKeyframeBuffer;
 	xpcf::DropBuffer<SRef<datastructure::Keyframe>>		m_newKeyframeLoopBuffer;

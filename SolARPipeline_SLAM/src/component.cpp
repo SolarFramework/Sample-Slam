@@ -258,11 +258,7 @@ void PipelineSlam::getCameraImages() {
 		m_stopFlag = true;
 		return;
 	}
-	if (m_bootstrapOk)
-		m_CameraImagesBuffer.push(view);
-	else
-		m_CameraImagesBootstrapBuffer.push(view);
-
+	m_CameraImagesBuffer.push(view);	
 #ifdef USE_IMAGES_SET
 	std::this_thread::sleep_for(std::chrono::milliseconds(40));
 #endif
@@ -270,15 +266,15 @@ void PipelineSlam::getCameraImages() {
 
 void PipelineSlam::doBootStrap()
 {
-	if (m_stopFlag || !m_initOK || !m_startedOK || m_bootstrapOk || !m_CameraImagesBootstrapBuffer.tryPop(m_camImage)) {
+	if (m_stopFlag || !m_initOK || !m_startedOK || m_bootstrapOk || !m_frameBootstrapBuffer.tryPop(m_frame)) {
 		xpcf::DelegateTask::yield();
 		return;
 	}
-
 	SRef<Image> view;
 	m_poseFrame = Transform3Df::Identity();
-	m_fiducialMarkerPoseEstimator->estimate(m_camImage, m_poseFrame);
-	if (m_bootstrapper->process(m_camImage, view, m_poseFrame) == FrameworkReturnCode::_SUCCESS) {
+	m_fiducialMarkerPoseEstimator->estimate(m_frame->getView(), m_poseFrame);
+	m_frame->setPose(m_poseFrame);
+	if (m_bootstrapper->process(m_frame, view) == FrameworkReturnCode::_SUCCESS) {
 		double bundleReprojError = m_bundler->bundleAdjustment(m_calibration, m_distortion);
 		m_keyframesManager->getKeyframe(0, m_keyframe2);
 		m_tracking->updateReferenceKeyframe(m_keyframe2);
@@ -293,8 +289,7 @@ void PipelineSlam::doBootStrap()
 
 void PipelineSlam::getKeyPoints() {
 	SRef<Image>  camImage;
-
-	if (m_stopFlag || !m_initOK || !m_startedOK || !m_bootstrapOk || !m_CameraImagesBuffer.tryPop(camImage)) {
+	if (m_stopFlag || !m_initOK || !m_startedOK || !m_CameraImagesBuffer.tryPop(camImage)) {
 		xpcf::DelegateTask::yield();
 		return;
 	}
@@ -309,7 +304,6 @@ void PipelineSlam::getDescriptors()
 		xpcf::DelegateTask::yield();
 		return;
 	}
-	
 	std::vector<Keypoint> undistortedKeypoints;
 	SRef<datastructure::DescriptorBuffer> descriptors;
 	if (frameKeypoints.second.size() > 0) {		
@@ -317,13 +311,16 @@ void PipelineSlam::getDescriptors()
 		m_descriptorExtractor->extract(frameKeypoints.first, frameKeypoints.second, descriptors);
 	}
 	SRef<Frame> frame = xpcf::utils::make_shared<Frame>(frameKeypoints.second, undistortedKeypoints, descriptors, frameKeypoints.first);
-	m_descriptorsBuffer.push(frame);
+	if (m_bootstrapOk)
+		m_frameBuffer.push(frame);
+	else
+		m_frameBootstrapBuffer.push(frame);
 };
 
 void PipelineSlam::tracking()
 {
 	SRef<Frame> newFrame;
-	if (m_stopFlag || !m_initOK || !m_startedOK || !m_descriptorsBuffer.tryPop(newFrame)) {
+	if (m_stopFlag || !m_initOK || !m_startedOK || !m_frameBuffer.tryPop(newFrame)) {
 		xpcf::DelegateTask::yield();
 		return;
 	}
