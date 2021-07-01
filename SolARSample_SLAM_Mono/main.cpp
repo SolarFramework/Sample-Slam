@@ -313,17 +313,17 @@ int main(int argc, char **argv) {
 					if (keyframe) {
 						tracking->updateReferenceKeyframe(keyframe);
 					}
-				}
-				// display point cloud
-				if (!fnDisplay(framePoses))
-					break;
+				}				
 			}
 			// draw cube
 			if (!frame->getPose().isApprox(Transform3Df::Identity()))
 				overlay3D->draw(frame->getPose(), displayImage);
 			// display matches and a cube on the origin of coordinate system
 			if (imageViewer->display(displayImage) == FrameworkReturnCode::_STOP)
-				break;			
+				break;	
+			// display point cloud
+			if (bootstrapOk && !fnDisplay(framePoses))
+				break;
 			count++;
 		}
 
