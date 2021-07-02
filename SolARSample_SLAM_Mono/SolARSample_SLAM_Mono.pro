@@ -58,6 +58,7 @@ unix {
 macx {
     QMAKE_MAC_SDK= macosx
     QMAKE_CXXFLAGS += -fasm-blocks -x objective-c++
+    LIBS += -L/usr/local/lib
 }
 
 win32 {
