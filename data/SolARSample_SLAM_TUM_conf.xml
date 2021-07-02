@@ -271,7 +271,7 @@
 			<property name="minWeightNeighbor" type="float" value="20.0"/>
 			<property name="maxNbNeighborKfs" type="int" value="10"/>
 			<property name="nbPassedFrameAtLeast" type="int" value="4"/>
-			<property name="ratioCPRefKeyframe" type="float" value="0.5"/>
+			<property name="ratioCPRefKeyframe" type="float" value="0.6"/>
             <property name="minTrackedPoints" type="int" value="200"/>
 		</configure>
 		<configure component="SolARMapManager">
@@ -289,7 +289,8 @@
 			<property name="type" type="string" value="AKAZE2"/>
 			<property name="imageRatio" type="float" value="1.0"/>
 			<property name="nbDescriptors" type="int" value="2000"/>
-			<property name="threshold" type="float" value="0.001"/>
+			<property name="threshold" type="float" value="0.0001"/>
+			<property name="borderRatio" type="float" value="0.0"/>
 		</configure>
 		<configure component="SolARDescriptorsExtractorAKAZEOpencv">
 			<property name="threshold" type="float" value="3e-4"/>
@@ -386,7 +387,7 @@
 			<property name="nbIterationsGlobal" type="int" value="20"/>
 			<property name="setVerbose" type="int" value="0"/>
 			<property name="nbMaxFixedKeyframes" type="int" value="30"/>
-			<property name="errorOutlier" type="float" value="10.0"/>
+			<property name="errorOutlier" type="float" value="3.0"/>
 			<property name="useSpanningTree" type="int" value="0"/>
 			<property name="isRobust" type="int" value="0"/>
 			<property name="fixedMap" type="int" value="0"/>
