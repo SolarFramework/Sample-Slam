@@ -2,10 +2,10 @@ build/
 
 *.pro.user
 
-*-Debug
-
-*-Release
-
+*-Debug*
+*-Release*
+*_Debug*
+*_Release*
 
 # Prerequisites
 *.d

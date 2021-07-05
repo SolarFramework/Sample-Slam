@@ -36,6 +36,7 @@ PipelineSlam::PipelineSlam():ConfigurableBase(xpcf::toUUID<PipelineSlam>())
 	declareInjectable<image::IImageConvertor>(m_imageConvertorUnity);
 	declareInjectable<loop::ILoopClosureDetector>(m_loopDetector);
 	declareInjectable<loop::ILoopCorrector>(m_loopCorrector);
+	declareInjectable<geom::IUndistortPoints>(m_undistortKeypoints);
 	declareInjectable<slam::IBootstrapper>(m_bootstrapper);
 	declareInjectable<slam::ITracking>(m_tracking);
 	declareInjectable<slam::IMapping>(m_mapping);
@@ -66,6 +67,7 @@ FrameworkReturnCode PipelineSlam::init(SRef<xpcf::IComponentManager> xpcfCompone
 		m_loopDetector->setCameraParameters(m_calibration, m_distortion);
 		m_loopCorrector->setCameraParameters(m_calibration, m_distortion);
 		m_fiducialMarkerPoseEstimator->setCameraParameters(m_calibration, m_distortion);
+		m_undistortKeypoints->setCameraParameters(m_calibration, m_distortion);
 		m_bootstrapper->setCameraParameters(m_calibration, m_distortion);
 		m_tracking->setCameraParameters(m_calibration, m_distortion);
 		m_mapping->setCameraParameters(m_calibration, m_distortion);
@@ -285,7 +287,9 @@ void PipelineSlam::getDescriptors()
 	}
 
 	m_descriptorExtractor->extract(frameKeypoints.first, frameKeypoints.second, m_descriptors);
-	SRef<Frame> frame = xpcf::utils::make_shared<Frame>(frameKeypoints.second, m_descriptors, frameKeypoints.first);
+	std::vector<Keypoint> undistortedKeypoints;
+	m_undistortKeypoints->undistort(frameKeypoints.second, undistortedKeypoints);
+	SRef<Frame> frame = xpcf::utils::make_shared<Frame>(frameKeypoints.second, undistortedKeypoints, m_descriptors, frameKeypoints.first);
 	m_descriptorsBuffer.push(frame);
 };
 
@@ -364,6 +368,8 @@ void PipelineSlam::loopClosure()
 	if (m_loopDetector->detect(lastKeyframe, detectedLoopKeyframe, sim3Transform, duplicatedPointsIndices) == FrameworkReturnCode::_SUCCESS) {
 		// detected loop keyframe
 		LOG_INFO("Detected loop keyframe id: {}", detectedLoopKeyframe->getId());
+		LOG_INFO("Nb of duplicatedPointsIndices: {}", duplicatedPointsIndices.size());
+		LOG_INFO("sim3Transform: \n{}", sim3Transform.matrix());
 		// performs loop correction 			
 		std::unique_lock<std::mutex> lock(m_mutexMapping);
 		m_countNewKeyframes = 0;
