@@ -3,4 +3,4 @@ SolARModuleOpenGL|0.9.1|SolARModuleOpenGL|SolARBuild@github|https://github.com/S
 SolARModuleTools|0.9.1|SolARModuleTools|SolARBuild@github|https://github.com/SolarFramework/SolARModuleTools/releases/download
 SolARModuleFBOW|0.9.1|SolARModuleFBOW|SolARBuild@github|https://github.com/SolarFramework/SolARModuleFBOW/releases/download
 SolARModuleG2O|0.9.1|SolARModuleG2O|SolARBuild@github|https://github.com/SolarFramework/SolARModuleG2O/releases/download
-SolARPipeline_Slam|0.9.1|SolARPipeline_Slam|SolARBuild@github|https://github.com/SolarFramework/Sample-Slam/releases/download
+SolARPipeline_SLAM|0.9.1|SolARPipeline_SLAM|SolARBuild@github|https://github.com/SolarFramework/Sample-Slam/releases/download
