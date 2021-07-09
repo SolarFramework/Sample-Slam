@@ -27,6 +27,12 @@ do
    remaken bundleXpcf $file -d ./bin/Debug -s modules -c debug
 done
 
+# Make data configuration files point to bundle libraries as well
+cp $PWD/data/SolARSample_SLAM_TUM_conf.xml $PWD/data/SolARSample_SLAM_TUM_conf.xml.copy
+cp $PWD/data/SolARPipelineTest_SLAM_TUM_conf.xml $PWD/data/SolARPipelineTest_SLAM_TUM_conf.xml.copy
+sed -i 's/path=".*"/path="modules"/g' $PWD/data/SolARSample_SLAM_TUM_conf.xml
+sed -i 's/path=".*"/path="modules"/g' $PWD/data/SolARPipelineTest_SLAM_TUM_conf.xml
+
 cp ./runFromBundle.sh ./run.sh
 mv ./run.sh ./bin/Release/
 cp ./runFromBundle.sh ./run.sh
@@ -35,3 +41,7 @@ mv ./run.sh ./bin/Debug
 
 zip --symlinks -r "./bin/${filename}_release.zip" ./bin/Release ./README.md ./installData.sh ./LICENSE data/SolARPipelineTest_SLAM_TUM_conf.xml data/SolARSample_SLAM_TUM_conf.xml data/tum_camera_calibration.yml
 zip --symlinks -r "./bin/${filename}_debug.zip" ./bin/Debug ./README.md ./installData.sh ./LICENSE data/SolARPipelineTest_SLAM_TUM_conf.xml data/SolARSample_SLAM_TUM_conf.xml data/tum_camera_calibration.yml
+
+# Restore data configuration file values for clean git status
+mv $PWD/data/SolARSample_SLAM_TUM_conf.xml.copy $PWD/data/SolARSample_SLAM_TUM_conf.xml
+mv $PWD/data/SolARPipelineTest_SLAM_TUM_conf.xml.copy $PWD/data/SolARPipelineTest_SLAM_TUM_conf.xml
