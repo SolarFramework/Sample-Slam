@@ -42,4 +42,10 @@ echo "**** Zip bundles"
 "7z.exe" a -tzip bin\%filename%_release.zip installData.bat
 "7z.exe" a -tzip bin\%filename%_debug.zip bin\Debug
 "7z.exe" a -tzip bin\%filename%_release.zip bin\Release
+"7z.exe" a -tzip bin\%filename%_debug.zip data\SolARPipelineTest_SLAM_TUM_conf.xml
+"7z.exe" a -tzip bin\%filename%_debug.zip data\SolARSample_SLAM_TUM_conf.xml
+"7z.exe" a -tzip bin\%filename%_debug.zip data\tum_camera_calibration.yml
+"7z.exe" a -tzip bin\%filename%_release.zip data\SolARPipelineTest_SLAM_TUM_conf.xml
+"7z.exe" a -tzip bin\%filename%_release.zip data\SolARSample_SLAM_TUM_conf.xml
+"7z.exe" a -tzip bin\%filename%_release.zip data\tum_camera_calibration.yml
 

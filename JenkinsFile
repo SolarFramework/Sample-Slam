@@ -9,7 +9,7 @@ SolArModulePipeline {
 }    
 
 SolArModulePipeline {
-    moduleName="SolARPipeline_SLAM"
+    moduleName="SolARSample_SLAM"
     dirName="SolARBuild"
     buildDir="SolARSample_SLAM_Mono,SolARSample_SLAM_Multi,SolARPipeline_SLAM/tests/SolARPipelineTest_SLAM"
     makeTarget="install install_deps"
