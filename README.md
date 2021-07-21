@@ -33,7 +33,7 @@ This script will install the following data into the `./data` folder:
 ### Camera Calibration
 
 We provide a defaut camera calibration file that contains intrinsic parameters of the camera logitech C920.
-If you want to change the calibration parameters of the camera, edit the `camera_calibration.yml` file.
+If you want to change the calibration parameters of the camera, edit the `camera_calibration.json` file.
 
 ### Initialization
 

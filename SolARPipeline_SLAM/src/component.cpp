@@ -72,7 +72,7 @@ FrameworkReturnCode PipelineSlam::init()
 		m_undistortKeypoints->setCameraParameters(m_calibration, m_distortion);
 		m_bootstrapper->setCameraParameters(m_calibration, m_distortion);
 		m_tracking->setCameraParameters(m_calibration, m_distortion);
-		m_mapping->setCameraParameters(m_calibration, m_distortion);
+		m_mapping->setCameraParameters(m_camera->getParameters());
 
 		// get properties
 		m_minWeightNeighbor = m_mapping->bindTo<xpcf::IConfigurable>()->getProperty("minWeightNeighbor")->getFloatingValue();

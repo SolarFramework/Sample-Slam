@@ -130,7 +130,7 @@ int main(int argc, char **argv) {
 		fiducialMarkerPoseEstimator->setCameraParameters(calibration, distortion);
 		bootstrapper->setCameraParameters(calibration, distortion);
 		tracking->setCameraParameters(calibration, distortion);
-		mapping->setCameraParameters(calibration, distortion);
+		mapping->setCameraParameters(camera->getParameters());
 		undistortKeypoints->setCameraParameters(calibration, distortion);
 		LOG_DEBUG("Intrincic parameters : \n {}", calibration);
 		// get properties
