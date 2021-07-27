@@ -317,7 +317,7 @@
 			<property name="type" type="string" value="AKAZE2"/>
 			<property name="imageRatio" type="float" value="1.0"/>
 			<property name="nbDescriptors" type="int" value="2000"/>
-			<property name="threshold" type="float" value="0.0001"/>
+			<property name="threshold" type="float" value="0.001"/>
 			<property name="borderRatio" type="float" value="0.0"/>
 		</configure>
 		<configure component="SolARDescriptorsExtractorAKAZEOpencv">

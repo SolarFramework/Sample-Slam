@@ -296,7 +296,7 @@
 			<property name="type" type="string" value="AKAZE2"/>
 			<property name="imageRatio" type="float" value="1.0"/>
 			<property name="nbDescriptors" type="int" value="2000"/>
-			<property name="threshold" type="float" value="0.0001"/>
+			<property name="threshold" type="float" value="0.001"/>
 			<property name="borderRatio" type="float" value="0.0"/>
 		</configure>
 		<configure component="SolARDescriptorsExtractorAKAZEOpencv">
@@ -358,7 +358,7 @@
 			<property name="threshold" type="float" value="0.01"/>
 			<property name="level" type="int" value="3"/>
 			<property name="matchingDistanceRatio" type="float" value="0.8"/>
-			<property name="matchingDistanceMax" type="float" value="800"/>
+			<property name="matchingDistanceMax" type="float" value="500"/>
 		</configure>
 		<configure component="SolAR3DTransformEstimationSACFrom3D3D">
 			<property name="iterationsCount" type="int" value="500"/>
