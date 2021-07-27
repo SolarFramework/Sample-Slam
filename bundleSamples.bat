@@ -1,7 +1,7 @@
 @echo off
 SETLOCAL EnableDelayedExpansion
 
-SET version=0.9.4
+SET version=0.10.0
 
 SET filename=SolAR_SLAM_%version%
 SET arg1=%1
@@ -42,4 +42,7 @@ echo "**** Zip bundles"
 "7z.exe" a -tzip bin\%filename%_release.zip installData.bat
 "7z.exe" a -tzip bin\%filename%_debug.zip bin\Debug
 "7z.exe" a -tzip bin\%filename%_release.zip bin\Release
+"7z.exe" a -tzip bin\%filename%_debug.zip data\tum_camera_calibration.json
+"7z.exe" a -tzip bin\%filename%_release.zip data\tum_camera_calibration.json
 
+"sh.exe" bundleDataConfigFiles.sh windows bin\%filename%_release.zip bin\%filename%_debug.zip
