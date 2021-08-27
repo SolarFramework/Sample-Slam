@@ -125,6 +125,12 @@ Change the `deviceID` parameter in the configuration file to the corresponding I
 
 * Press `escape` to quit the application.
 
+## Known problems
+
+### Mac
+
+Image viewer (from OpenCV) and 3D points viewer (from OpenGL) cannot be opened at the same time.
+
 ## Contact 
 Website https://solarframework.github.io/
 

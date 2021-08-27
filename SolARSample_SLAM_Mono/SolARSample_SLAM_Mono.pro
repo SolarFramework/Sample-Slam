@@ -2,9 +2,11 @@
 QT       -= core gui
 CONFIG -= qt
 
+QMAKE_PROJECT_DEPTH = 0
+
 ## global defintions : target lib name, version
 TARGET = SolARSample_SLAM_Mono
-VERSION=0.9.1
+VERSION=0.10.0
 
 DEFINES += MYVERSION=$${VERSION}
 CONFIG += c++1z
@@ -58,6 +60,7 @@ unix {
 macx {
     QMAKE_MAC_SDK= macosx
     QMAKE_CXXFLAGS += -fasm-blocks -x objective-c++
+    LIBS += -L/usr/local/lib
 }
 
 win32 {

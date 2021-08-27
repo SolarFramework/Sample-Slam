@@ -3,12 +3,12 @@
 
 #if _WIN32
 #ifdef SolARPipeline_SLAM_API_DLLEXPORT
-#define SOLARPIPELINESLAM_EXPORT_API __declspec(dllexport)
-#else //SOLARPIPELINEFIDUCIALMARKER_API_DLLEXPORT
-#define SOLARPIPELINESLAM_EXPORT_API __declspec(dllimport)
-#endif //SOLARPIPELINEFIDUCIALMARKER_API_DLLEXPORT
+#define SOLARPIPELINE_SLAM_EXPORT_API __declspec(dllexport)
+#else //SolARPipeline_SLAM_API_DLLEXPORT
+#define SOLARPIPELINE_SLAM_EXPORT_API __declspec(dllimport)
+#endif //SolARPipeline_SLAM_API_DLLEXPORT
 #else //_WIN32
-#define SOLARPIPELINESLAM_EXPORT_API
+#define SOLARPIPELINE_SLAM_EXPORT_API
 #endif //_WIN32
 
 #include "xpcf/core/traits.h"
@@ -20,17 +20,18 @@
 #include "api/input/devices/ICamera.h"
 #include "api/features/IKeypointDetector.h"
 #include "api/features/IDescriptorsExtractor.h"
-#include "api/solver/map/IMapper.h"
+#include "api/storage/IMapManager.h"
 #include "api/display/I2DOverlay.h"
 #include "api/display/IMatchesOverlay.h"
 #include "api/display/I3DOverlay.h"
 #include "api/display/IImageViewer.h"
 #include "api/display/I3DPointsViewer.h"
 #include "api/reloc/IKeyframeRetriever.h"
-#include "api/storage/ICovisibilityGraph.h"
+#include "api/storage/ICovisibilityGraphManager.h"
 #include "api/storage/IKeyframesManager.h"
 #include "api/storage/IPointCloudManager.h"
-#include "api/solver/pose/IFiducialMarkerPose.h"
+#include "api/input/files/ITrackableLoader.h"
+#include "api/solver/pose/ITrackablePose.h"
 #include "api/solver/map/IBundler.h"
 #include "api/geom/IUndistortPoints.h"
 #include "api/loop/ILoopClosureDetector.h"
@@ -52,9 +53,6 @@
 #include "xpcf/threading/DropBuffer.h"
 #include "xpcf/threading/BaseTask.h"
 
-//#define USE_IMAGES_SET
-//#define VIDEO_INPUT
-
 namespace xpcf = org::bcom::xpcf;
 
 namespace SolAR {
@@ -68,14 +66,15 @@ namespace PIPELINES {
  * @SolARComponentInjectable{SolAR::api::input::devices::ICamera}
  * @SolARComponentInjectable{SolAR::api::storage::IPointCloudManager}
  * @SolARComponentInjectable{SolAR::api::storage::IKeyframesManager}
- * @SolARComponentInjectable{SolAR::api::storage::ICovisibilityGraph}
+ * @SolARComponentInjectable{SolAR::api::storage::ICovisibilityGraphManager}
  * @SolARComponentInjectable{SolAR::api::reloc::IKeyframeRetriever}
- * @SolARComponentInjectable{SolAR::api::solver::map::IMapper}
+ * @SolARComponentInjectable{SolAR::api::storage::IMapManager}
  * @SolARComponentInjectable{SolAR::api::solver::map::IBundler}
  * @SolARComponentInjectable{SolAR::api::solver::map::IBundler}
  * @SolARComponentInjectable{SolAR::api::features::IKeypointDetector}
  * @SolARComponentInjectable{SolAR::api::features::IDescriptorsExtractor}
- * @SolARComponentInjectable{SolAR::api::solver::pose::IFiducialMarkerPose}
+ * @SolARComponentInjectable{SolAR::input::files::ITrackableLoader}
+ * @SolARComponentInjectable{SolAR::api::solver::pose::ITrackablePose}
  * @SolARComponentInjectable{SolAR::api::image::IImageConvertor}
  * @SolARComponentInjectable{SolAR::api::loop::ILoopClosureDetector}
  * @SolARComponentInjectable{SolAR::api::loop::ILoopCorrector}
@@ -88,7 +87,7 @@ namespace PIPELINES {
  *
  */
 
-class SOLARPIPELINESLAM_EXPORT_API PipelineSlam : public org::bcom::xpcf::ConfigurableBase,
+class SOLARPIPELINE_SLAM_EXPORT_API PipelineSlam : public org::bcom::xpcf::ConfigurableBase,
     public api::pipeline::IPoseEstimationPipeline
 {
 public:
@@ -96,9 +95,8 @@ public:
     ~PipelineSlam();
 
     //// @brief Initialization of the pipeline
-    /// Initialize the pipeline by providing a reference to the component manager loaded by the PipelineManager.
-    /// @param[in] componentManager a shared reference to the component manager which has loaded the components and configuration in the pipleine manager
-    FrameworkReturnCode init(SRef<xpcf::IComponentManager> xpcfComponentManager) override;
+    /// @return FrameworkReturnCode::_SUCCESS if the init succeed, else FrameworkReturnCode::_ERROR_
+    FrameworkReturnCode init() override;
 
     /// @brief Provide the camera parameters
     /// @return the camera parameters (its resolution and its focal)
@@ -160,9 +158,9 @@ private:
 	// storage components
 	SRef<api::storage::IPointCloudManager>				m_pointCloudManager;
 	SRef<api::storage::IKeyframesManager>				m_keyframesManager;
-	SRef<api::storage::ICovisibilityGraph>				m_covisibilityGraph;
+	SRef<api::storage::ICovisibilityGraphManager>		m_covisibilityGraphManager;
 	SRef<api::reloc::IKeyframeRetriever>				m_kfRetriever;
-	SRef<api::solver::map::IMapper>						m_mapper;
+	SRef<api::storage::IMapManager>						m_mapManager;
 
 	// components
     SRef<api::input::devices::ICamera>					m_camera;
@@ -171,7 +169,8 @@ private:
     SRef<api::features::IDescriptorsExtractor>			m_descriptorExtractor;
 	SRef<api::solver::map::IBundler>					m_bundler;
 	SRef<api::solver::map::IBundler>					m_globalBundler;
-	SRef<api::solver::pose::IFiducialMarkerPose>		m_fiducialMarkerPoseEstimator;
+    SRef<api::input::files::ITrackableLoader>           m_trackableLoader;
+    SRef<api::solver::pose::ITrackablePose>             m_fiducialMarkerPoseEstimator;
 	SRef<api::loop::ILoopClosureDetector>				m_loopDetector;
 	SRef<api::loop::ILoopCorrector>						m_loopCorrector;
 	SRef<api::geom::IUndistortPoints>					m_undistortKeypoints;
@@ -191,7 +190,7 @@ private:
 	SRef<api::source::ISourceImage>						m_source;
 
 	// SLAM variables
-	datastructure::Transform3Df							m_pose;
+    datastructure::Transform3Df							m_pose;
 	SRef<datastructure::Image>							m_camImage;
 	datastructure::Transform3Df                         m_poseFrame;
     SRef<datastructure::Keyframe>                       m_keyframe1, m_keyframe2;
@@ -202,12 +201,12 @@ private:
 	float												m_reprojErrorThreshold;
 	datastructure::CamCalibration                       m_calibration;
 	datastructure::CamDistortion                        m_distortion;
-	std::vector<datastructure::Keypoint>				m_keypoints;
-	SRef<datastructure::DescriptorBuffer>				m_descriptors;
+	std::vector<datastructure::Keypoint>				m_keypoints;	
 	double												m_bundleReprojError;
 	std::mutex											m_mutexMapping;
 
 	xpcf::DropBuffer< SRef<datastructure::Image>>		m_CameraImagesBuffer;
+	xpcf::DropBuffer< SRef<datastructure::Image>>		m_CameraImagesBootstrapBuffer;
 	xpcf::DropBuffer< std::pair< SRef<datastructure::Image>, std::vector<datastructure::Keypoint> >> m_keypointsBuffer;
 	xpcf::DropBuffer< SRef<datastructure::Frame >>		m_descriptorsBuffer;
 	xpcf::DropBuffer<SRef<datastructure::Frame>>		m_addKeyframeBuffer;

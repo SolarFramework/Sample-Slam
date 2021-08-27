@@ -4,7 +4,8 @@
 #include "boost/log/core/core.hpp"
 #include <cmath>
 
-#define NB_NEWKEYFRAMES_BA 10
+#define NB_NEWKEYFRAMES_LOOP 10
+#define NB_LOCALKEYFRAMES 10
 
 // The pipeline component for the fiducial marker
 
@@ -25,14 +26,15 @@ PipelineSlam::PipelineSlam():ConfigurableBase(xpcf::toUUID<PipelineSlam>())
     declareInjectable<input::devices::ICamera>(m_camera);
 	declareInjectable<IPointCloudManager>(m_pointCloudManager);
 	declareInjectable<IKeyframesManager>(m_keyframesManager);
-	declareInjectable<ICovisibilityGraph>(m_covisibilityGraph);
+	declareInjectable<ICovisibilityGraphManager>(m_covisibilityGraphManager);
 	declareInjectable<reloc::IKeyframeRetriever>(m_kfRetriever);
-	declareInjectable<solver::map::IMapper>(m_mapper);
+	declareInjectable<IMapManager>(m_mapManager);
 	declareInjectable<solver::map::IBundler>(m_bundler);
 	declareInjectable<solver::map::IBundler>(m_globalBundler, "GlobalBA");
 	declareInjectable<features::IKeypointDetector>(m_keypointsDetector);
 	declareInjectable<features::IDescriptorsExtractor>(m_descriptorExtractor);
-	declareInjectable<solver::pose::IFiducialMarkerPose>(m_fiducialMarkerPoseEstimator);
+    declareInjectable<input::files::ITrackableLoader>(m_trackableLoader);
+    declareInjectable<solver::pose::ITrackablePose>(m_fiducialMarkerPoseEstimator);
 	declareInjectable<image::IImageConvertor>(m_imageConvertorUnity);
 	declareInjectable<loop::ILoopClosureDetector>(m_loopDetector);
 	declareInjectable<loop::ILoopCorrector>(m_loopCorrector);
@@ -57,7 +59,7 @@ PipelineSlam::~PipelineSlam()
      LOG_DEBUG(" Pipeline destructor")
 }
 
-FrameworkReturnCode PipelineSlam::init(SRef<xpcf::IComponentManager> xpcfComponentManager)
+FrameworkReturnCode PipelineSlam::init()
 {    
     // component creation
     try {
@@ -74,7 +76,7 @@ FrameworkReturnCode PipelineSlam::init(SRef<xpcf::IComponentManager> xpcfCompone
 
 		// get properties
 		m_minWeightNeighbor = m_mapping->bindTo<xpcf::IConfigurable>()->getProperty("minWeightNeighbor")->getFloatingValue();
-		m_reprojErrorThreshold = m_mapper->bindTo<xpcf::IConfigurable>()->getProperty("reprojErrorThreshold")->getFloatingValue();
+		m_reprojErrorThreshold = m_mapManager->bindTo<xpcf::IConfigurable>()->getProperty("reprojErrorThreshold")->getFloatingValue();
 
         m_initOK = true;	
 		m_haveToBeFlip = false;
@@ -103,12 +105,12 @@ FrameworkReturnCode PipelineSlam::start(void* imageDataBuffer)
 		if (m_camera->start() != FrameworkReturnCode::_SUCCESS)
 		{
 			LOG_ERROR("Camera cannot start")
-				return FrameworkReturnCode::_ERROR_;
+            return FrameworkReturnCode::_ERROR_;
 		}
 	}
 
 	// Load map from file
-	if (m_mapper->loadFromFile() == FrameworkReturnCode::_SUCCESS) {
+	if (m_mapManager->loadFromFile() == FrameworkReturnCode::_SUCCESS) {
 		LOG_INFO("Load map done!");
 	}
 	else
@@ -130,6 +132,20 @@ FrameworkReturnCode PipelineSlam::start(void* imageDataBuffer)
 	{
 		// Either no or empty map files
 		LOG_INFO("Initialization from scratch");
+        SRef<Trackable> trackable;
+        if (m_trackableLoader->loadTrackable(trackable) != FrameworkReturnCode::_SUCCESS)
+        {
+            LOG_ERROR("cannot load fiducial marker");
+            return FrameworkReturnCode::_ERROR_;
+        }
+        else
+        {
+            if (m_fiducialMarkerPoseEstimator->setTrackable(trackable)!= FrameworkReturnCode::_SUCCESS)
+            {
+                LOG_ERROR("cannot set fiducial marker as a trackable ofr fiducial marker pose estimator");
+                return FrameworkReturnCode::_ERROR_;
+            }
+        }
 	}
 
     // create and start threads
@@ -194,8 +210,13 @@ FrameworkReturnCode PipelineSlam::stop()
         return FrameworkReturnCode::_ERROR_;
     }
     LOG_INFO("Pipeline has stopped: \n");
+	// run global BA before exit
+	m_globalBundler->bundleAdjustment(m_calibration, m_distortion);
+	// map pruning
+	m_mapManager->pointCloudPruning();
+	m_mapManager->keyframePruning();
 	// Save map
-	m_mapper->saveToFile();
+	m_mapManager->saveToFile();
 
     return FrameworkReturnCode::_SUCCESS;
 }
@@ -237,7 +258,10 @@ void PipelineSlam::getCameraImages() {
 		m_stopFlag = true;
 		return;
 	}
-	m_CameraImagesBuffer.push(view);
+	if (m_bootstrapOk)
+		m_CameraImagesBuffer.push(view);
+	else
+		m_CameraImagesBootstrapBuffer.push(view);
 
 #ifdef USE_IMAGES_SET
 	std::this_thread::sleep_for(std::chrono::milliseconds(40));
@@ -246,7 +270,7 @@ void PipelineSlam::getCameraImages() {
 
 void PipelineSlam::doBootStrap()
 {
-	if (m_stopFlag || !m_initOK || !m_startedOK || m_bootstrapOk || !m_CameraImagesBuffer.tryPop(m_camImage)) {
+	if (m_stopFlag || !m_initOK || !m_startedOK || m_bootstrapOk || !m_CameraImagesBootstrapBuffer.tryPop(m_camImage)) {
 		xpcf::DelegateTask::yield();
 		return;
 	}
@@ -285,11 +309,14 @@ void PipelineSlam::getDescriptors()
 		xpcf::DelegateTask::yield();
 		return;
 	}
-
-	m_descriptorExtractor->extract(frameKeypoints.first, frameKeypoints.second, m_descriptors);
+	
 	std::vector<Keypoint> undistortedKeypoints;
-	m_undistortKeypoints->undistort(frameKeypoints.second, undistortedKeypoints);
-	SRef<Frame> frame = xpcf::utils::make_shared<Frame>(frameKeypoints.second, undistortedKeypoints, m_descriptors, frameKeypoints.first);
+	SRef<datastructure::DescriptorBuffer> descriptors;
+	if (frameKeypoints.second.size() > 0) {		
+		m_undistortKeypoints->undistort(frameKeypoints.second, undistortedKeypoints);
+		m_descriptorExtractor->extract(frameKeypoints.first, frameKeypoints.second, descriptors);
+	}
+	SRef<Frame> frame = xpcf::utils::make_shared<Frame>(frameKeypoints.second, undistortedKeypoints, descriptors, frameKeypoints.first);
 	m_descriptorsBuffer.push(frame);
 };
 
@@ -335,15 +362,22 @@ void PipelineSlam::mapping()
 		LOG_DEBUG("New keyframe id: {}", keyframe->getId());
 		// Local bundle adjustment
 		std::vector<uint32_t> bestIdx, bestIdxToOptimize;
-		m_covisibilityGraph->getNeighbors(keyframe->getId(), m_minWeightNeighbor, bestIdx);
-		if (bestIdx.size() < 10)
-			bestIdxToOptimize.swap(bestIdx);
+		m_covisibilityGraphManager->getNeighbors(keyframe->getId(), m_minWeightNeighbor, bestIdx);
+		if (bestIdx.size() < NB_LOCALKEYFRAMES)
+			bestIdxToOptimize = bestIdx;
 		else
-			bestIdxToOptimize.insert(bestIdxToOptimize.begin(), bestIdx.begin(), bestIdx.begin() + 10);
+			bestIdxToOptimize.insert(bestIdxToOptimize.begin(), bestIdx.begin(), bestIdx.begin() + NB_LOCALKEYFRAMES);
 		bestIdxToOptimize.push_back(keyframe->getId());
 		LOG_DEBUG("Nb keyframe to local bundle: {}", bestIdx.size());
 		double bundleReprojError = m_bundler->bundleAdjustment(m_calibration, m_distortion, bestIdxToOptimize);
-		m_mapper->pruning();
+		// local map pruning
+		std::vector<SRef<CloudPoint>> localPointCloud;
+		m_mapManager->getLocalPointCloud(keyframe, 1.0, localPointCloud);
+		int nbRemovedCP = m_mapManager->pointCloudPruning(localPointCloud);
+		std::vector<SRef<Keyframe>> localKeyframes;
+		m_keyframesManager->getKeyframes(bestIdx, localKeyframes);
+		int nbRemovedKf = m_mapManager->keyframePruning(localKeyframes);
+		LOG_DEBUG("Nb of pruning cloud points / keyframes: {} / {}", nbRemovedCP, nbRemovedKf);
 		m_countNewKeyframes++;
 		m_newKeyframeLoopBuffer.push(keyframe);
 	}
@@ -357,7 +391,7 @@ void PipelineSlam::mapping()
 void PipelineSlam::loopClosure()
 {		
 	SRef<Keyframe> lastKeyframe;
-	if (m_stopFlag || !m_initOK || !m_startedOK || (m_countNewKeyframes < NB_NEWKEYFRAMES_BA) || (!m_newKeyframeLoopBuffer.tryPop(lastKeyframe))) {
+	if (m_stopFlag || !m_initOK || !m_startedOK || (m_countNewKeyframes < NB_NEWKEYFRAMES_LOOP) || (!m_newKeyframeLoopBuffer.tryPop(lastKeyframe))) {
 		xpcf::DelegateTask::yield();
 		return;
 	}
@@ -376,7 +410,9 @@ void PipelineSlam::loopClosure()
 		m_loopCorrector->correct(lastKeyframe, detectedLoopKeyframe, sim3Transform, duplicatedPointsIndices);		
 		// Loop optimisation
 		m_globalBundler->bundleAdjustment(m_calibration, m_distortion);
-		m_mapper->pruning();
+		// map pruning
+		m_mapManager->pointCloudPruning();
+		m_mapManager->keyframePruning();
 	}
 }
 
