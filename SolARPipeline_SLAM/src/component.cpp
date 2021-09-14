@@ -31,8 +31,7 @@ PipelineSlam::PipelineSlam():ConfigurableBase(xpcf::toUUID<PipelineSlam>())
 	declareInjectable<IMapManager>(m_mapManager);
 	declareInjectable<solver::map::IBundler>(m_bundler);
 	declareInjectable<solver::map::IBundler>(m_globalBundler, "GlobalBA");
-	declareInjectable<features::IKeypointDetector>(m_keypointsDetector);
-	declareInjectable<features::IDescriptorsExtractor>(m_descriptorExtractor);
+	declareInjectable<features::IDescriptorsExtractorFromImage>(m_descriptorExtractor);
     declareInjectable<input::files::ITrackableLoader>(m_trackableLoader);
     declareInjectable<solver::pose::ITrackablePose>(m_fiducialMarkerPoseEstimator);
 	declareInjectable<image::IImageConvertor>(m_imageConvertorUnity);
@@ -151,7 +150,6 @@ FrameworkReturnCode PipelineSlam::start(void* imageDataBuffer)
     // create and start threads
     auto getCameraImagesThread = [this](){getCameraImages();};
     auto doBootStrapThread = [this](){doBootStrap();};
-    auto getKeyPointsThread = [this](){getKeyPoints();};
     auto getDescriptorsThread = [this](){getDescriptors();};
     auto getTrackingThread = [this](){tracking();};
     auto getMappingThread = [this](){mapping();};
@@ -159,7 +157,6 @@ FrameworkReturnCode PipelineSlam::start(void* imageDataBuffer)
 
     m_taskGetCameraImages = new xpcf::DelegateTask(getCameraImagesThread);
     m_taskDoBootStrap = new xpcf::DelegateTask(doBootStrapThread);
-    m_taskGetKeyPoints = new xpcf::DelegateTask(getKeyPointsThread);
     m_taskGetDescriptors = new xpcf::DelegateTask(getDescriptorsThread);
     m_taskTracking = new xpcf::DelegateTask(getTrackingThread);
     m_taskMapping = new xpcf::DelegateTask(getMappingThread);
@@ -167,7 +164,6 @@ FrameworkReturnCode PipelineSlam::start(void* imageDataBuffer)
 
     m_taskGetCameraImages->start();
     m_taskDoBootStrap ->start();
-    m_taskGetKeyPoints->start();
     m_taskGetDescriptors->start();
 	m_taskTracking->start();
 	m_taskMapping->start();
@@ -188,8 +184,6 @@ FrameworkReturnCode PipelineSlam::stop()
         m_taskGetCameraImages->stop();
     if (m_taskDoBootStrap != nullptr)
         m_taskDoBootStrap->stop();
-    if (m_taskGetKeyPoints != nullptr)
-        m_taskGetKeyPoints->stop();
     if (m_taskGetDescriptors != nullptr)
         m_taskGetDescriptors->stop();
     if (m_taskTracking != nullptr)
@@ -287,34 +281,23 @@ void PipelineSlam::doBootStrap()
 		m_sink->set(view);
 }
 
-void PipelineSlam::getKeyPoints() {
-	SRef<Image>  camImage;
-	if (m_stopFlag || !m_initOK || !m_startedOK || !m_CameraImagesBuffer.tryPop(camImage)) {
-		xpcf::DelegateTask::yield();
-		return;
-	}
-	m_keypointsDetector->detect(camImage, m_keypoints);
-	m_keypointsBuffer.push(std::make_pair(camImage, m_keypoints));
-};
-
 void PipelineSlam::getDescriptors()
 {
-	std::pair<SRef<Image>, std::vector<Keypoint>> frameKeypoints;
-	if (m_stopFlag || !m_initOK || !m_startedOK || !m_keypointsBuffer.tryPop(frameKeypoints)) {
+	SRef<Image> image;
+	if (m_stopFlag || !m_initOK || !m_startedOK || !m_CameraImagesBuffer.tryPop(image)) {
 		xpcf::DelegateTask::yield();
 		return;
 	}
-	std::vector<Keypoint> undistortedKeypoints;
+	std::vector<Keypoint> keypoints, undistortedKeypoints;
 	SRef<datastructure::DescriptorBuffer> descriptors;
-	if (frameKeypoints.second.size() > 0) {		
-		m_undistortKeypoints->undistort(frameKeypoints.second, undistortedKeypoints);
-		m_descriptorExtractor->extract(frameKeypoints.first, frameKeypoints.second, descriptors);
+	if (m_descriptorExtractor->extract(image, keypoints, descriptors) == FrameworkReturnCode::_SUCCESS) {
+		m_undistortKeypoints->undistort(keypoints, undistortedKeypoints);
+		SRef<Frame> frame = xpcf::utils::make_shared<Frame>(keypoints, undistortedKeypoints, descriptors, image);
+		if (m_bootstrapOk)
+			m_frameBuffer.push(frame);
+		else
+			m_frameBootstrapBuffer.push(frame);
 	}
-	SRef<Frame> frame = xpcf::utils::make_shared<Frame>(frameKeypoints.second, undistortedKeypoints, descriptors, frameKeypoints.first);
-	if (m_bootstrapOk)
-		m_frameBuffer.push(frame);
-	else
-		m_frameBootstrapBuffer.push(frame);
 };
 
 void PipelineSlam::tracking()

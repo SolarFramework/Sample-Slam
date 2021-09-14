@@ -14,11 +14,6 @@
  * limitations under the License.
  */
 
-#include <iostream>
-#include <string>
-#include <vector>
-#include <set>
-#include <cmath>
 #include <boost/log/core.hpp>
 
 // ADD XPCF HEADERS HERE
@@ -26,10 +21,7 @@
 #include "core/Log.h"
 // ADD COMPONENTS HEADERS HERE
 #include "api/input/devices/ICamera.h"
-#include "api/image/IImageFilter.h"
 #include "api/features/IDescriptorsExtractorFromImage.h"
-#include "api/features/IKeypointDetector.h"
-#include "api/features/IDescriptorsExtractor.h"
 #include "api/storage/IMapManager.h"
 #include "api/display/I3DOverlay.h"
 #include "api/display/IImageViewer.h"
@@ -47,12 +39,9 @@
 #include "api/slam/IBootstrapper.h"
 #include "api/slam/ITracking.h"
 #include "api/slam/IMapping.h"
-#include "api/image/IImageConvertor.h"
 
 #define NB_NEWKEYFRAMES_LOOP 10
 #define NB_LOCALKEYFRAMES 10
-#define USING_FILTER 0
-#define USING_POPSIFT 0
 
 using namespace SolAR;
 using namespace SolAR::datastructure;
@@ -84,54 +73,25 @@ int main(int argc, char **argv) {
 		}
 		// declare and create components
 		LOG_INFO("Start creating components");
-		LOG_INFO("Resolving camera ");
 		auto camera = xpcfComponentManager->resolve<input::devices::ICamera>();
-		LOG_INFO("Resolving point cloud manager");
 		auto pointCloudManager = xpcfComponentManager->resolve<IPointCloudManager>();
-		LOG_INFO("Resolving key frames manager");
 		auto keyframesManager = xpcfComponentManager->resolve<IKeyframesManager>();
-		LOG_INFO("Resolving covisibility graph");
 		auto covisibilityGraphManager = xpcfComponentManager->resolve<ICovisibilityGraphManager>();
-		LOG_INFO("Resolving key frame retriever");
 		auto keyframeRetriever = xpcfComponentManager->resolve<IKeyframeRetriever>();
-		LOG_INFO("Resolving key mapper");
-		auto mapManager = xpcfComponentManager->resolve<IMapManager>();
-        LOG_INFO("Resolving Image FIlter");
-        auto imageFilter = xpcfComponentManager->resolve<image::IImageFilter>("TrackingFilter");
-        if (!imageFilter)
-            LOG_INFO("No pre-filtering of the captured images has been set in the configuration file with name Tracking Filter");
-        LOG_INFO("Resolving key points detector");
-		auto  keypointsDetector = xpcfComponentManager->resolve<features::IKeypointDetector>();
-		LOG_INFO("Resolving descriptor extractor");
-		auto descriptorExtractor = xpcfComponentManager->resolve<features::IDescriptorsExtractor>();
-        LOG_INFO("Resolving descriptor extractor");
+		auto mapManager = xpcfComponentManager->resolve<IMapManager>();      
         auto descriptorExtractorFromImage = xpcfComponentManager->resolve<features::IDescriptorsExtractorFromImage>();
-		LOG_INFO("Resolving image viewer");
 		auto imageViewer = xpcfComponentManager->resolve<display::IImageViewer>();
-		LOG_INFO("Resolving viewer3D points");
 		auto viewer3DPoints = xpcfComponentManager->resolve<display::I3DPointsViewer>();
-		LOG_INFO("Resolving loop detector");
 		auto loopDetector = xpcfComponentManager->resolve<loop::ILoopClosureDetector>();
-		LOG_INFO("Resolving loop corrector");
 		auto loopCorrector = xpcfComponentManager->resolve<loop::ILoopCorrector>();
-		LOG_INFO("Resolving 3D overlay");
 		auto overlay3D = xpcfComponentManager->resolve<display::I3DOverlay>();
-        LOG_INFO("Resolving Trackable Loader");
         auto trackableLoader = xpcfComponentManager->resolve<input::files::ITrackableLoader>();
-		LOG_INFO("Resolving Fiducial marker pose");
         auto fiducialMarkerPoseEstimator = xpcfComponentManager->resolve<solver::pose::ITrackablePose>();
-		LOG_INFO("Resolving bundle adjustment");
 		auto bundler = xpcfComponentManager->resolve<api::solver::map::IBundler>();
-		LOG_INFO("Resolving undistort points");
 		auto undistortKeypoints = xpcfComponentManager->resolve<api::geom::IUndistortPoints>();
-		LOG_INFO("Resolving bootstrapper");
 		auto bootstrapper = xpcfComponentManager->resolve<slam::IBootstrapper>();
-		LOG_INFO("Resolving tracking");
 		auto tracking = xpcfComponentManager->resolve<slam::ITracking>();
-		LOG_INFO("Resolving mapping");
 		auto mapping = xpcfComponentManager->resolve<slam::IMapping>();
-		LOG_INFO("Resolving image convertor");
-		auto imageConvertor = xpcfComponentManager->resolve<image::IImageConvertor>();
 		LOG_INFO("Loaded all components");
 
 		// initialize pose estimation with the camera intrinsic parameters (please refer to the use of intrinsic parameters file)
@@ -171,6 +131,8 @@ int main(int argc, char **argv) {
 			tracking->updateReferenceKeyframe(keyframe2);
 			framePoses.push_back(keyframe2->getPose());
 			bootstrapOk = true;
+			LOG_INFO("Number of initial point cloud: {}", pointCloudManager->getNbPoints());
+			LOG_INFO("Number of initial keyframes: {}", keyframesManager->getNbKeyframes());
         }
         else
         {
@@ -222,35 +184,17 @@ int main(int argc, char **argv) {
 			SRef<Keyframe>										keyframe;
 			// Get current image
 			if (camera->getNextImage(view) != FrameworkReturnCode::_SUCCESS)
-				break;            
-			// convert to grey image
-			SRef<Image> greyImage;
-			if (view->getImageLayout() != Image::ImageLayout::LAYOUT_GREY)
-				imageConvertor->convert(view, greyImage, datastructure::Image::ImageLayout::LAYOUT_GREY);
-			else
-				greyImage = view;
-			// Image pre-filtering
-			SRef<Image> filteredImage;
-			if (USING_FILTER)
-				imageFilter->filter(greyImage, filteredImage);
-			else
-				filteredImage = greyImage;
-            // feature extraction (use directly a descriptor extractor from image if defined in the configuration file
-            if (USING_POPSIFT && descriptorExtractorFromImage)
-                descriptorExtractorFromImage->extract(filteredImage, keypoints, descriptors);
-            else {
-				keypointsDetector->detect(filteredImage, keypoints);
-				if (keypoints.size() == 0)
-					continue;
-				descriptorExtractor->extract(filteredImage, keypoints, descriptors);
-            }
+				break;            		
+            // feature extraction
+			if (descriptorExtractorFromImage->extract(view, keypoints, descriptors) != FrameworkReturnCode::_SUCCESS)
+				continue;
 			// undistort keypoints
 			undistortKeypoints->undistort(keypoints, undistortedKeypoints);
             frame = xpcf::utils::make_shared<Frame>(keypoints, undistortedKeypoints, descriptors, view);
 			// check bootstrap
 			if (!bootstrapOk) {
 				Transform3Df pose;
-				if (hasPose && (fiducialMarkerPoseEstimator->estimate(greyImage, pose) == FrameworkReturnCode::_SUCCESS))
+				if (hasPose && (fiducialMarkerPoseEstimator->estimate(view, pose) == FrameworkReturnCode::_SUCCESS))
 					frame->setPose(pose);
 				if (bootstrapper->process(frame, displayImage) == FrameworkReturnCode::_SUCCESS) {
 					keyframesManager->getKeyframe(1, keyframe2);
