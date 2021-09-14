@@ -1,12 +1,12 @@
 <?xml version="1.0"?>
 <xpcf-registry autoAlias="true" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
-    <module uuid="da89a6eb-3233-4dea-afdc-9d918be0bd74" name="SolARPipeline_SLAM" path="$XPCF_MODULE_ROOT/SolARBuild/SolARPipeline_SLAM/0.9.3/lib/x86_64/shared" description="The module embedding a pipeline to estimate the pose based on a multithreaded Slam">
+    <module uuid="da89a6eb-3233-4dea-afdc-9d918be0bd74" name="SolARPipeline_SLAM" path="$XPCF_MODULE_ROOT/SolARBuild/SolARPipeline_SLAM/0.10.0/lib/x86_64/shared" description="The module embedding a pipeline to estimate the pose based on a multithreaded Slam">
 		<component uuid="577ccd2c-de1b-402a-8829-496747598588" name="PipelineSlam" description="A pipeline to estimate the pose based on a multithreaded Slam">
 			<interface uuid="125f2007-1bf9-421d-9367-fbdc1210d006" name="IComponentIntrospect" description="IComponentIntrospect"/>
 			<interface uuid="b5a6225e-6a91-4050-b298-886f4c17d9d2" name="IPoseEstimationPipeline" description="The interface to define a video see-throuh pipeline"/>
 		</component>
 	</module>
-	<module uuid="15e1990b-86b2-445c-8194-0cbe80ede970" name="SolARModuleOpenCV" description="SolARModuleOpenCV" path="$XPCF_MODULE_ROOT/SolARBuild/SolARModuleOpenCV/0.9.3/lib/x86_64/shared">
+	<module uuid="15e1990b-86b2-445c-8194-0cbe80ede970" name="SolARModuleOpenCV" description="SolARModuleOpenCV" path="$XPCF_MODULE_ROOT/SolARBuild/SolARModuleOpenCV/0.10.0/lib/x86_64/shared">
 		<component uuid="5B7396F4-A804-4F3C-A0EB-FB1D56042BB4" name="SolARCameraOpencv" description="SolARCameraOpencv">
 			<interface uuid="125f2007-1bf9-421d-9367-fbdc1210d006" name="IComponentIntrospect" description="IComponentIntrospect"/>
 			<interface uuid="5DDC7DF0-8377-437F-9C81-3643F7676A5B" name="ICamera" description="ICamera"/>
@@ -38,6 +38,14 @@
 		<component uuid="7823dac8-1597-41cf-bdef-59aa22f3d40a" name="SolARDescriptorMatcherKNNOpencv" description="SolARDescriptorMatcherKNNOpencv">
 			<interface uuid="125f2007-1bf9-421d-9367-fbdc1210d006" name="IComponentIntrospect" description="IComponentIntrospect"/>
 			<interface uuid="dda38a40-c50a-4e7d-8433-0f04c7c98518" name="IDescriptorMatcher" description="IDescriptorMatcher"/>
+		</component>
+		<component uuid="389ece8b-9e29-45ae-bd60-de1784ff0931" name="SolARDescriptorMatcherGeometricOpencv" description="SolARDescriptorMatcherGeometricOpencv">
+			<interface uuid="125f2007-1bf9-421d-9367-fbdc1210d006" name="IComponentIntrospect" description="IComponentIntrospect"/>
+			<interface uuid="2ed445a6-32f3-44a1-9dc5-3b0cfec778db" name="IDescriptorMatcherGeometric" description="IDescriptorMatcherGeometric"/>
+		</component>
+		<component uuid="a12a8706-299b-4981-b12b-60717ef3b160" name="SolARDescriptorMatcherRegionOpencv" description="SolARDescriptorMatcherRegionOpencv">
+			<interface uuid="125f2007-1bf9-421d-9367-fbdc1210d006" name="IComponentIntrospect" description="IComponentIntrospect"/>
+			<interface uuid="bdef063d-96de-4425-83c5-fec7b7e448c8" name="IDescriptorMatcherRegion" description="IDescriptorMatcherRegion"/>
 		</component>
 		<component uuid="d67ce1ba-04a5-43bc-a0f8-e0c3653b32c9" name="SolARDescriptorMatcherHammingBruteForceOpencv" description="SolARDescriptorMatcherHammingBruteForceOpencv">
 			<interface uuid="125f2007-1bf9-421d-9367-fbdc1210d006" name="IComponentIntrospect" description="IComponentIntrospect"/>
@@ -132,13 +140,13 @@
 			<interface uuid="6ed0413a-751e-4c33-b91b-97b3ea949bc2" name="ICornerRefinement" description="ICornerRefinement"/>
 		</component>
 	</module>	
-	<module uuid="6e960df6-9a36-11e8-9eb6-529269fb1459" name="SolARModuleOpenGL" description="SolARModuleOpenGL" path="$XPCF_MODULE_ROOT/SolARBuild/SolARModuleOpenGL/0.9.3/lib/x86_64/shared">
+	<module uuid="6e960df6-9a36-11e8-9eb6-529269fb1459" name="SolARModuleOpenGL" description="SolARModuleOpenGL" path="$XPCF_MODULE_ROOT/SolARBuild/SolARModuleOpenGL/0.10.0/lib/x86_64/shared">
 		<component uuid="afd38ea0-9a46-11e8-9eb6-529269fb1459" name="SolAR3DPointsViewerOpengl" description="SolAR3DPointsViewerOpengl">
 			<interface uuid="125f2007-1bf9-421d-9367-fbdc1210d006" name="IComponentIntrospect" description="IComponentIntrospect"/>
 			<interface uuid="575d365a-9a27-11e8-9eb6-529269fb1459" name="I3DPointsViewer" description="I3DPointsViewer"/>
 		</component>
 	</module> 		
-	<module uuid="28b89d39-41bd-451d-b19e-d25a3d7c5797" name="SolARModuleTools"  description="SolARModuleTools"  path="$XPCF_MODULE_ROOT/SolARBuild/SolARModuleTools/0.9.3/lib/x86_64/shared">
+	<module uuid="28b89d39-41bd-451d-b19e-d25a3d7c5797" name="SolARModuleTools"  description="SolARModuleTools"  path="$XPCF_MODULE_ROOT/SolARBuild/SolARModuleTools/0.10.0/lib/x86_64/shared">
 		<component uuid="85db2f25-4f1c-4e06-9011-e020284bfc4f" name="SolARBasicSink" description="A Sink component for a synchronized pose and image pair">
 			<interface uuid="125f2007-1bf9-421d-9367-fbdc1210d006" name="IComponentIntrospect" description="IComponentIntrospect"/>
 			<interface uuid="c0d9fee4-d7d7-4866-a6cd-3bacac23316a" name="ISinkPoseImage" description="An interface allowing to store a synchronized pose and image from the pipeline to make it available to a third party application"/>
@@ -216,13 +224,13 @@
 			<interface uuid="33db5a56-9be2-4e5a-8fdc-de25e1633cf6" name="IMapping" description="IMapping"/>
 		</component>
 	</module>
-	<module uuid="b81f0b90-bdbc-11e8-a355-529269fb1459" name="SolARModuleFBOW" description="SolARModuleFBOW" path="$XPCF_MODULE_ROOT/SolARBuild/SolARModuleFBOW/0.9.3/lib/x86_64/shared">
+	<module uuid="b81f0b90-bdbc-11e8-a355-529269fb1459" name="SolARModuleFBOW" description="SolARModuleFBOW" path="$XPCF_MODULE_ROOT/SolARBuild/SolARModuleFBOW/0.10.0/lib/x86_64/shared">
 		<component uuid="9d1b1afa-bdbc-11e8-a355-529269fb1459" name="SolARKeyframeRetrieverFBOW" description="SolARKeyframeRetrieverFBOW">
 			<interface uuid="125f2007-1bf9-421d-9367-fbdc1210d006" name="IComponentIntrospect" description="IComponentIntrospect"/>
 			<interface uuid="f60980ce-bdbd-11e8-a355-529269fb1459" name="IKeyframeRetriever" description="IKeyframeRetriever"/>
 		</component>
 	</module>   
-	<module uuid="8f94a3c5-79ed-4851-9502-98033eae3a3b" name="SolARModuleG2O" description="SolARModuleG2O" path="$XPCF_MODULE_ROOT/SolARBuild/SolARModuleG2O/0.9.3/lib/x86_64/shared">
+	<module uuid="8f94a3c5-79ed-4851-9502-98033eae3a3b" name="SolARModuleG2O" description="SolARModuleG2O" path="$XPCF_MODULE_ROOT/SolARBuild/SolARModuleG2O/0.10.0/lib/x86_64/shared">
 		<component uuid="870d89ba-bb5f-460a-a817-1fcb6473df70" name="SolAROptimizationG2O" description="SolAROptimizationG2O">
 			<interface uuid="125f2007-1bf9-421d-9367-fbdc1210d006" name="IComponentIntrospect" description="IComponentIntrospect"/>
 			<interface uuid="35b9bdb7-d23c-4909-984f-ae7f9a292e6c" name="IBundler" description="IBundler"/>
@@ -238,7 +246,6 @@
 			<bind interface="IBundler" to="SolAROptimizationG2O"/>	
 			<bind interface="I3DTransform" to="SolAR3DTransform"/>
 			<bind interface="IDescriptorMatcher" to="SolARDescriptorMatcherKNNOpencv"/>
-			<bind interface="IKeyframeSelector" to="SolARKeyframeSelector"/>
 			<bind interface="IMapManager" to="SolARMapManager" scope="Singleton"/>
 			<bind interface="IPointCloudManager" to="SolARPointCloudManager" scope="Singleton"/>
 			<bind interface="IKeyframesManager" to="SolARKeyframesManager" scope="Singleton"/>
@@ -266,7 +273,7 @@
 
 	<properties>
 		<configure component="SolARCameraOpencv">
-			<property name="calibrationFile" type="string" value="camera_calibration.yml"/>
+			<property name="calibrationFile" type="string" value="camera_calibration.json"/>
 			<property name="deviceID" type="uint" value="0"/>
 		</configure>
 		<configure component="SolARImagesAsCameraOpencv">
@@ -297,7 +304,7 @@
             <property name="minTrackedPoints" type="int" value="200"/>
 		</configure>
 		<configure component="SolARMapManager">
-			<property name="directory" type="string" value="map"/>
+			<property name="directory" type="string" value="output/pipelinetest-map"/>
 			<property name="identificationFileName" type="string" value="identification.bin"/>
 			<property name="coordinateFileName" type="string" value="coordinate.bin"/>
 			<property name="pointCloudManagerFileName" type="string" value="pointcloud.bin"/>
@@ -324,8 +331,16 @@
 		</configure>
 		<configure component="SolARDescriptorMatcherKNNOpencv">
 			<property name="distanceRatio" type="float" value="0.8"/>
+		</configure>
+		<configure component="SolARDescriptorMatcherRegionOpencv">
+			<property name="distanceRatio" type="float" value="0.8"/>
 			<property name="radius" type="float" value="15"/>
-			<property name="matchingDistanceMax" type="float" value="800"/>
+			<property name="matchingDistanceMax" type="float" value="500"/>
+		</configure>
+		<configure component="SolARDescriptorMatcherGeometricOpencv">
+			<property name="distanceRatio" type="float" value="0.7"/>
+			<property name="paddingRatio" type="float" value="0.003"/>
+			<property name="matchingDistanceMax" type="float" value="500"/>
 		</configure>
 		<configure component="SolARDescriptorMatcherHammingBruteForceOpencv">
 			<property name="distanceRatio" type="float" value="0.9"/>

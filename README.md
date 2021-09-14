@@ -33,7 +33,7 @@ This script will install the following data into the `./data` folder:
 ### Camera Calibration
 
 We provide a defaut camera calibration file that contains intrinsic parameters of the camera logitech C920.
-If you want to change the calibration parameters of the camera, edit the `camera_calibration.yml` file.
+If you want to change the calibration parameters of the camera, edit the `camera_calibration.json` file.
 
 ### Initialization
 
@@ -124,6 +124,12 @@ Change the `deviceID` parameter in the configuration file to the corresponding I
 * :warning: In the case of lost tracking, you can return the camera to the previous views to relocalize camera pose instead of restarting.
 
 * Press `escape` to quit the application.
+
+## Known problems
+
+### Mac
+
+Image viewer (from OpenCV) and 3D points viewer (from OpenGL) cannot be opened at the same time.
 
 ## Contact 
 Website https://solarframework.github.io/

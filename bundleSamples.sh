@@ -1,5 +1,5 @@
-
-Version="0.9.4"
+#!/bin/bash
+Version="0.10.0"
 
 if [ -z "$1" ]
 then
@@ -33,5 +33,7 @@ cp ./runFromBundle.sh ./run.sh
 mv ./run.sh ./bin/Debug
 
 
-zip --symlinks -r "./bin/${filename}_release.zip" ./bin/Release ./README.md ./installData.sh ./LICENSE
-zip --symlinks -r "./bin/${filename}_debug.zip" ./bin/Debug ./README.md ./installData.sh ./LICENSE 
+zip --symlinks -r "./bin/${filename}_release.zip" ./bin/Release ./README.md ./installData.sh ./LICENSE data/SolARPipelineTest_SLAM_TUM_conf.xml data/SolARSample_SLAM_TUM_conf.xml data/tum_camera_calibration.json
+zip --symlinks -r "./bin/${filename}_debug.zip" ./bin/Debug ./README.md ./installData.sh ./LICENSE data/SolARPipelineTest_SLAM_TUM_conf.xml data/SolARSample_SLAM_TUM_conf.xml data/tum_camera_calibration.json
+
+./bundleDataConfigFiles.sh linux "./bin/${filename}_release.zip" "./bin/${filename}_debug.zip"

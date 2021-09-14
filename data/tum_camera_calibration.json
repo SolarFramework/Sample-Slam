@@ -1,0 +1,19 @@
+{
+    "CameraParameters": {
+        "name": "TUM camera",
+        "id": 0,
+        "type": 0,
+        "resolution": {
+            "width": 640,
+            "height": 480
+        },
+        "intrinsic": [
+            5.354e+02, 0, 3.201e+02,
+			0, 5.392e+02, 2.476e+02, 
+            0, 0, 1
+        ],
+        "distortion": [
+            0.0,0.0, 0.0, 0.0, 0.0
+        ]
+    }
+}

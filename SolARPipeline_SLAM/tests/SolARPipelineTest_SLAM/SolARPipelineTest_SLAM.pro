@@ -4,7 +4,7 @@ CONFIG -= qt
 
 ## global defintions : target lib name, version
 TARGET = SolARPipelineTest_SLAM
-VERSION=0.9.3
+VERSION=0.10.0
 
 DEFINES += MYVERSION=$${VERSION}
 CONFIG += c++1z
@@ -62,7 +62,7 @@ DISTFILES += \
 
 config_files.path = $${TARGETDEPLOYDIR}
 config_files.files= $$files($${PWD}/SolARPipelineTest_SLAM_conf.xml)\
-                    $$files($${PWD}/camera_calibration.yml)\
+                    $$files($${PWD}/camera_calibration.json)\
                     $$files($${PWD}/fiducialMarker.yml)\
                     $$files($${PWD}/FiducialMarker.gif)
 INSTALLS += config_files

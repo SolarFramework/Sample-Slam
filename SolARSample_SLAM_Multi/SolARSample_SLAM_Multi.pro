@@ -2,9 +2,11 @@
 QT       -= core gui
 CONFIG -= qt
 
+QMAKE_PROJECT_DEPTH = 0
+
 ## global defintions : target lib name, version
 TARGET = SolARSample_SLAM_Multi
-VERSION=0.9.3
+VERSION=0.10.0
 
 DEFINES += MYVERSION=$${VERSION}
 CONFIG += c++1z
@@ -76,7 +78,7 @@ android {
 
 config_files.path = $${TARGETDEPLOYDIR}
 config_files.files=$$files($${PWD}/SolARSample_SLAM_Multi_conf.xml)\
-                    $$files($${PWD}/camera_calibration.yml)\
+                    $$files($${PWD}/camera_calibration.json)\
                     $$files($${PWD}/fiducialMarker.yml)\
                     $$files($${PWD}/FiducialMarker.gif)
 INSTALLS += config_files
