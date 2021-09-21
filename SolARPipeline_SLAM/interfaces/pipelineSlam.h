@@ -2,7 +2,7 @@
 #define PIPELINESLAM_H
 
 #if _WIN32
-#ifdef SolARPipeline_SLAM_API_DLLEXPORT
+#ifdef SolARPipelineSLAM_API_DLLEXPORT
 #define SOLARPIPELINE_SLAM_EXPORT_API __declspec(dllexport)
 #else //SolARPipeline_SLAM_API_DLLEXPORT
 #define SOLARPIPELINE_SLAM_EXPORT_API __declspec(dllimport)
