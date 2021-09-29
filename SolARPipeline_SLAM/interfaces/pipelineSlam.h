@@ -18,8 +18,7 @@
 // Add the headers to datastructures and component interfaces used by the pipeline
 
 #include "api/input/devices/ICamera.h"
-#include "api/features/IKeypointDetector.h"
-#include "api/features/IDescriptorsExtractor.h"
+#include "api/features/IDescriptorsExtractorFromImage.h"
 #include "api/storage/IMapManager.h"
 #include "api/display/I2DOverlay.h"
 #include "api/display/IMatchesOverlay.h"
@@ -39,8 +38,8 @@
 #include "api/slam/IBootstrapper.h"
 #include "api/slam/ITracking.h"
 #include "api/slam/IMapping.h"
-#include "core/Log.h"
 #include "api/image/IImageConvertor.h"
+#include "core/Log.h"
 
 #ifdef USE_OPENGL
     #include "api/sink/ISinkPoseTextureBuffer.h"
@@ -71,8 +70,7 @@ namespace PIPELINES {
  * @SolARComponentInjectable{SolAR::api::storage::IMapManager}
  * @SolARComponentInjectable{SolAR::api::solver::map::IBundler}
  * @SolARComponentInjectable{SolAR::api::solver::map::IBundler}
- * @SolARComponentInjectable{SolAR::api::features::IKeypointDetector}
- * @SolARComponentInjectable{SolAR::api::features::IDescriptorsExtractor}
+ * @SolARComponentInjectable{SolAR::api::features::IDescriptorsExtractorFromImage}
  * @SolARComponentInjectable{SolAR::input::files::ITrackableLoader}
  * @SolARComponentInjectable{SolAR::api::solver::pose::ITrackablePose}
  * @SolARComponentInjectable{SolAR::api::image::IImageConvertor}
@@ -133,9 +131,6 @@ private:
 	// Bootstrap task
 	void doBootStrap();
 
-	// Keypoint detection task
-	void getKeyPoints();
-
 	// Feature extraction task
 	void getDescriptors();
 
@@ -165,8 +160,7 @@ private:
 	// components
     SRef<api::input::devices::ICamera>					m_camera;
 	SRef<api::image::IImageConvertor>					m_imageConvertorUnity;
-    SRef<api::features::IKeypointDetector>				m_keypointsDetector;
-    SRef<api::features::IDescriptorsExtractor>			m_descriptorExtractor;
+    SRef<api::features::IDescriptorsExtractorFromImage>	m_descriptorExtractor;
 	SRef<api::solver::map::IBundler>					m_bundler;
 	SRef<api::solver::map::IBundler>					m_globalBundler;
     SRef<api::input::files::ITrackableLoader>           m_trackableLoader;
@@ -191,7 +185,7 @@ private:
 
 	// SLAM variables
     datastructure::Transform3Df							m_pose;
-	SRef<datastructure::Image>							m_camImage;
+	SRef<datastructure::Frame>							m_frame;
 	datastructure::Transform3Df                         m_poseFrame;
     SRef<datastructure::Keyframe>                       m_keyframe1, m_keyframe2;
 	bool												m_bootstrapOk = false;
@@ -201,14 +195,12 @@ private:
 	float												m_reprojErrorThreshold;
 	datastructure::CamCalibration                       m_calibration;
 	datastructure::CamDistortion                        m_distortion;
-	std::vector<datastructure::Keypoint>				m_keypoints;	
 	double												m_bundleReprojError;
 	std::mutex											m_mutexMapping;
 
-	xpcf::DropBuffer< SRef<datastructure::Image>>		m_CameraImagesBuffer;
-	xpcf::DropBuffer< SRef<datastructure::Image>>		m_CameraImagesBootstrapBuffer;
-	xpcf::DropBuffer< std::pair< SRef<datastructure::Image>, std::vector<datastructure::Keypoint> >> m_keypointsBuffer;
-	xpcf::DropBuffer< SRef<datastructure::Frame >>		m_descriptorsBuffer;
+	xpcf::DropBuffer< SRef<datastructure::Image>>		m_CameraImagesBuffer;	
+	xpcf::DropBuffer< SRef<datastructure::Frame >>		m_frameBuffer;
+	xpcf::DropBuffer< SRef<datastructure::Frame>>		m_frameBootstrapBuffer;
 	xpcf::DropBuffer<SRef<datastructure::Frame>>		m_addKeyframeBuffer;
 	xpcf::DropBuffer<SRef<datastructure::Keyframe>>		m_newKeyframeBuffer;
 	xpcf::DropBuffer<SRef<datastructure::Keyframe>>		m_newKeyframeLoopBuffer;
@@ -216,7 +208,6 @@ private:
 	// tasks
     xpcf::DelegateTask*									m_taskGetCameraImages;
     xpcf::DelegateTask*									m_taskDoBootStrap;
-    xpcf::DelegateTask*									m_taskGetKeyPoints;
     xpcf::DelegateTask*									m_taskGetDescriptors;
     xpcf::DelegateTask*									m_taskTracking;
     xpcf::DelegateTask*									m_taskMapping;        

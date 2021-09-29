@@ -14,11 +14,6 @@
  * limitations under the License.
  */
 
-#include <iostream>
-#include <string>
-#include <vector>
-#include <set>
-#include <cmath>
 #include <boost/log/core.hpp>
  // ADD XPCF HEADERS HERE
 #include "xpcf/xpcf.h"
@@ -27,8 +22,7 @@
 #include "core/Log.h"
 // ADD COMPONENTS HEADERS HERE
 #include "api/input/devices/ICamera.h"
-#include "api/features/IKeypointDetector.h"
-#include "api/features/IDescriptorsExtractor.h"
+#include "api/features/IDescriptorsExtractorFromImage.h"
 #include "api/storage/IMapManager.h"
 #include "api/display/I3DOverlay.h"
 #include "api/display/IImageViewer.h"
@@ -88,8 +82,7 @@ int main(int argc, char **argv) {
 		auto keyframeRetriever = xpcfComponentManager->resolve<IKeyframeRetriever>();
 		auto mapManager = xpcfComponentManager->resolve<IMapManager>();
 		auto camera = xpcfComponentManager->resolve<input::devices::ICamera>();
-		auto keypointsDetector = xpcfComponentManager->resolve<features::IKeypointDetector>();
-		auto descriptorExtractor = xpcfComponentManager->resolve<features::IDescriptorsExtractor>();
+		auto descriptorExtractor = xpcfComponentManager->resolve<features::IDescriptorsExtractorFromImage>();
 		auto imageViewer = xpcfComponentManager->resolve<display::IImageViewer>();
 		auto viewer3DPoints = xpcfComponentManager->resolve<display::I3DPointsViewer>();
         auto trackableLoader = xpcfComponentManager->resolve<input::files::ITrackableLoader>();
@@ -146,14 +139,13 @@ int main(int argc, char **argv) {
 				return true;
 		};
 
-		xpcf::DropBuffer<SRef<Image>>												m_dropBufferCamImageCapture;
-		xpcf::DropBuffer<SRef<Image>>												m_dropBufferCamImageCaptureBootstrap;
+		xpcf::DropBuffer<SRef<Image>>												m_dropBufferCamImageCapture;		
 		xpcf::DropBuffer<SRef<Frame>>												m_dropBufferAddKeyframe;
 		xpcf::DropBuffer<SRef<Keyframe>>											m_dropBufferNewKeyframe;
 		xpcf::DropBuffer<SRef<Keyframe>>											m_dropBufferNewKeyframeLoop;
 		xpcf::DropBuffer<SRef<Image>>												m_dropBufferDisplay;
-		xpcf::DropBuffer< std::pair<SRef<Image>, std::vector<Keypoint>>>			m_dropBufferKeypoints;
-		xpcf::DropBuffer<SRef<Frame>>												m_dropBufferFrameDescriptors;
+		xpcf::DropBuffer<SRef<Frame>>												m_dropBufferFrameTracking;
+		xpcf::DropBuffer<SRef<Frame>>												m_dropBufferFrameBootstrap;
 		bool stop = false;
 		bool bootstrapOk = false;
 		SRef<Keyframe> keyframe2;
@@ -214,24 +206,42 @@ int main(int argc, char **argv) {
 				stop = true;
 				return;
 			}
-			if (bootstrapOk)
-				m_dropBufferCamImageCapture.push(view);
-			else
-				m_dropBufferCamImageCaptureBootstrap.push(view);
+			m_dropBufferCamImageCapture.push(view);			
+		};
+
+		// Feature extraction task
+		auto fnExtraction = [&]()
+		{
+			SRef<Image> image;
+			if (!m_dropBufferCamImageCapture.tryPop(image)) {
+				xpcf::DelegateTask::yield();
+				return;
+			}
+			std::vector<Keypoint> keypoints, undistortedKeypoints;
+			SRef<DescriptorBuffer> descriptors;
+			if (descriptorExtractor->extract(image, keypoints, descriptors) == FrameworkReturnCode::_SUCCESS) {
+				undistortKeypoints->undistort(keypoints, undistortedKeypoints);
+				SRef<Frame> frame = xpcf::utils::make_shared<Frame>(keypoints, undistortedKeypoints, descriptors, image);
+				if (bootstrapOk)
+					m_dropBufferFrameTracking.push(frame);
+				else
+					m_dropBufferFrameBootstrap.push(frame);
+			}						
 		};
 
 		// Bootstrap task
 		auto fnBootstrap = [&]()
 		{
-			SRef<Image> image;
-			if (bootstrapOk || !m_dropBufferCamImageCaptureBootstrap.tryPop(image)) {
+			SRef<Frame> frame;
+			if (bootstrapOk || !m_dropBufferFrameBootstrap.tryPop(frame)) {
 				xpcf::DelegateTask::yield();
 				return;
 			}
 			SRef<Image> view;
 			Transform3Df pose = Transform3Df::Identity();
-			fiducialMarkerPoseEstimator->estimate(image, pose);
-			if (bootstrapper->process(image, view, pose) == FrameworkReturnCode::_SUCCESS) {
+			fiducialMarkerPoseEstimator->estimate(frame->getView(), pose);
+			frame->setPose(pose);
+			if (bootstrapper->process(frame, view) == FrameworkReturnCode::_SUCCESS) {
 				double bundleReprojError = bundler->bundleAdjustment(calibration, distortion);
 				keyframesManager->getKeyframe(1, keyframe2);
 				tracking->updateReferenceKeyframe(keyframe2);
@@ -245,42 +255,11 @@ int main(int argc, char **argv) {
 			m_dropBufferDisplay.push(view);
 		};
 
-		// Keypoint detection task
-		auto fnDetection = [&]()
-		{
-			SRef<Image> frame;
-			if (!m_dropBufferCamImageCapture.tryPop(frame)) {
-				xpcf::DelegateTask::yield();
-				return;
-			}
-			std::vector<Keypoint> keypoints;
-			keypointsDetector->detect(frame, keypoints);
-			m_dropBufferKeypoints.push(std::make_pair(frame, keypoints));
-		};
-
-		// Feature extraction task
-		auto fnExtraction = [&]()
-		{
-			std::pair<SRef<Image>, std::vector<Keypoint>> frameKeypoints;
-			if (!m_dropBufferKeypoints.tryPop(frameKeypoints)) {
-				xpcf::DelegateTask::yield();
-				return;
-			}
-			std::vector<Keypoint> undistortedKeypoints;			
-			SRef<DescriptorBuffer> descriptors;
-			if (frameKeypoints.second.size() > 0) {
-				undistortKeypoints->undistort(frameKeypoints.second, undistortedKeypoints);
-				descriptorExtractor->extract(frameKeypoints.first, frameKeypoints.second, descriptors);
-			}
-			SRef<Frame> frame = xpcf::utils::make_shared<Frame>(frameKeypoints.second, undistortedKeypoints, descriptors, frameKeypoints.first);
-			m_dropBufferFrameDescriptors.push(frame);
-		};
-
 		// Tracking task		
 		auto fnTracking = [&]()
 		{
 			SRef<Frame> frame;
-			if (!bootstrapOk || !m_dropBufferFrameDescriptors.tryPop(frame)) {
+			if (!bootstrapOk || !m_dropBufferFrameTracking.tryPop(frame)) {
 				xpcf::DelegateTask::yield();
 				return;
 			}
@@ -376,7 +355,6 @@ int main(int argc, char **argv) {
 		// instantiate and start tasks
 		xpcf::DelegateTask taskCamImageCapture(fnCamImageCapture);
 		xpcf::DelegateTask taskBootstrap(fnBootstrap);
-		xpcf::DelegateTask taskDetection(fnDetection);
 		xpcf::DelegateTask taskExtraction(fnExtraction);
 		xpcf::DelegateTask taskTracking(fnTracking);
 		xpcf::DelegateTask taskMapping(fnMapping);
@@ -384,7 +362,6 @@ int main(int argc, char **argv) {
 
 		taskCamImageCapture.start();
 		taskBootstrap.start();
-		taskDetection.start();
 		taskExtraction.start();
 		taskTracking.start();
 		taskMapping.start();
@@ -413,7 +390,6 @@ int main(int argc, char **argv) {
 		// Stop tasks
 		taskCamImageCapture.stop();
 		taskBootstrap.stop();
-		taskDetection.stop();
 		taskExtraction.stop();
 		taskTracking.stop();
 		taskMapping.stop();
