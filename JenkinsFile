@@ -1,7 +1,7 @@
 node("master") {
 
 SolArModulePipeline {
-    moduleName="SolARPipeline_SLAM"
+    moduleName="SolARPipelineSLAM"
     dirName="SolARBuild"
     buildDir="SolARPipeline_SLAM"
     makeTarget="install install_deps" 
