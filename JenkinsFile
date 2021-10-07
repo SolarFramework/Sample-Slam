@@ -4,7 +4,7 @@ SolArModulePipeline {
     moduleName="SolARPipelineSLAM"
     dirName="SolARBuild"
     buildDir="SolARPipeline_SLAM"
-    makeTarget="install install_deps" 
+    makeTarget="install" 
     android=true
 }    
 
