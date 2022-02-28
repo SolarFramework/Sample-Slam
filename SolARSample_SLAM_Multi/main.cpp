@@ -141,7 +141,6 @@ int main(int argc, char **argv) {
 
 		xpcf::DropBuffer<SRef<Image>>												m_dropBufferCamImageCapture;		
 		xpcf::DropBuffer<SRef<Frame>>												m_dropBufferAddKeyframe;
-		xpcf::DropBuffer<SRef<Keyframe>>											m_dropBufferNewKeyframe;
 		xpcf::DropBuffer<SRef<Keyframe>>											m_dropBufferNewKeyframeLoop;
 		xpcf::DropBuffer<SRef<Image>>												m_dropBufferDisplay;
 		xpcf::DropBuffer<SRef<Frame>>												m_dropBufferFrameTracking;
@@ -150,7 +149,8 @@ int main(int argc, char **argv) {
 		bool bootstrapOk = false;
 		SRef<Keyframe> keyframe2;
 		std::vector<Transform3Df> framePoses;
-		bool isStopMapping = false;
+		bool isMappingIdle = true;
+		bool isLoopIdle = true;
 		int countNewKeyframes = 0;
 
 		// Load map from file
@@ -170,7 +170,7 @@ int main(int argc, char **argv) {
 			{
 				return -1; //FrameworkReturnCode::_ERROR_;
 			}
-			tracking->updateReferenceKeyframe(keyframe2);
+			tracking->setNewKeyframe(keyframe2);
 			framePoses.push_back(keyframe2->getPose());
 			LOG_INFO("Number of initial point cloud: {}", pointCloudManager->getNbPoints());
 			LOG_INFO("Number of initial keyframes: {}", keyframesManager->getNbKeyframes());
@@ -244,7 +244,7 @@ int main(int argc, char **argv) {
 			if (bootstrapper->process(frame, view) == FrameworkReturnCode::_SUCCESS) {
 				double bundleReprojError = bundler->bundleAdjustment(calibration, distortion);
 				keyframesManager->getKeyframe(1, keyframe2);
-				tracking->updateReferenceKeyframe(keyframe2);
+				tracking->setNewKeyframe(keyframe2);
 				framePoses.push_back(keyframe2->getPose());
 				LOG_INFO("Number of initial point cloud: {}", pointCloudManager->getNbPoints());
 				LOG_INFO("Number of initial keyframes: {}", keyframesManager->getNbKeyframes());
@@ -263,14 +263,6 @@ int main(int argc, char **argv) {
 				xpcf::DelegateTask::yield();
 				return;
 			}
-			SRef<Keyframe> newKeyframe;
-			if (m_dropBufferNewKeyframe.tryPop(newKeyframe))
-			{
-				tracking->updateReferenceKeyframe(newKeyframe);
-				SRef<Frame> tmpFrame;
-				m_dropBufferAddKeyframe.tryPop(tmpFrame);
-				isStopMapping = false;
-			}
 			// tracking
 			SRef<Image>	displayImage;
 			if (tracking->process(frame, displayImage) == FrameworkReturnCode::_SUCCESS) {
@@ -279,7 +271,8 @@ int main(int argc, char **argv) {
 				// draw cube
 				overlay3D->draw(frame->getPose(), displayImage);
 				// send frame to mapping task
-				m_dropBufferAddKeyframe.push(frame);
+				if (isMappingIdle && isLoopIdle && tracking->checkNeedNewKeyframe())
+					m_dropBufferAddKeyframe.push(frame);
 			}
 
 			m_dropBufferDisplay.push(displayImage);
@@ -289,22 +282,20 @@ int main(int argc, char **argv) {
 		auto fnMapping = [&]()
 		{
 			SRef<Frame> frame;
-			if (isStopMapping || (!m_dropBufferAddKeyframe.tryPop(frame))) {
+			if (!m_dropBufferAddKeyframe.tryPop(frame)) {
 				xpcf::DelegateTask::yield();
 				return;
 			}
+			isMappingIdle = false;
 			SRef<Keyframe> keyframe;
 			if (mapping->process(frame, keyframe) == FrameworkReturnCode::_SUCCESS) {
 				LOG_DEBUG("New keyframe id: {}", keyframe->getId());
 				// Local bundle adjustment
-				std::vector<uint32_t> bestIdx, bestIdxToOptimize;
-				covisibilityGraphManager->getNeighbors(keyframe->getId(), minWeightNeighbor, bestIdx);
-				if (bestIdx.size() < NB_LOCALKEYFRAMES)
-					bestIdxToOptimize = bestIdx;
-				else
-					bestIdxToOptimize.insert(bestIdxToOptimize.begin(), bestIdx.begin(), bestIdx.begin() + NB_LOCALKEYFRAMES);
-				bestIdxToOptimize.push_back(keyframe->getId());
-				double bundleReprojError = bundler->bundleAdjustment(calibration, distortion, bestIdxToOptimize);
+				std::vector<uint32_t> bestIdx;
+				covisibilityGraphManager->getNeighbors(keyframe->getId(), minWeightNeighbor, bestIdx, NB_LOCALKEYFRAMES);
+				bestIdx.push_back(keyframe->getId());
+				LOG_DEBUG("Nb keyframe to local bundle: {}", bestIdx.size());
+				double bundleReprojError = bundler->bundleAdjustment(calibration, distortion, bestIdx);
 				// local map pruning
 				std::vector<SRef<CloudPoint>> localPointCloud;
 				mapManager->getLocalPointCloud(keyframe, 1.0, localPointCloud);
@@ -315,13 +306,10 @@ int main(int argc, char **argv) {
 				LOG_DEBUG("Nb of pruning cloud points / keyframes: {} / {}", nbRemovedCP, nbRemovedKf);
 				countNewKeyframes++;
 				m_dropBufferNewKeyframeLoop.push(keyframe);
+				// send new keyframe to tracking
+				tracking->setNewKeyframe(keyframe);
 			}
-
-			if (keyframe) {
-				isStopMapping = true;
-				m_dropBufferNewKeyframe.push(keyframe);
-			}
-
+			isMappingIdle = true;
 		};
 
 		// loop closure task
@@ -336,6 +324,8 @@ int main(int argc, char **argv) {
 			Transform3Df sim3Transform;
 			std::vector<std::pair<uint32_t, uint32_t>> duplicatedPointsIndices;
 			if (loopDetector->detect(lastKeyframe, detectedLoopKeyframe, sim3Transform, duplicatedPointsIndices) == FrameworkReturnCode::_SUCCESS) {
+				// stop mapping process
+				isLoopIdle = false;
 				// detected loop keyframe
 				LOG_INFO("Detected loop keyframe id: {}", detectedLoopKeyframe->getId());
 				LOG_INFO("Nb of duplicatedPointsIndices: {}", duplicatedPointsIndices.size());
@@ -349,6 +339,8 @@ int main(int argc, char **argv) {
 				// map pruning
 				mapManager->pointCloudPruning();
 				mapManager->keyframePruning();
+				// free mapping
+				isLoopIdle = true;
 			}
 		};
 

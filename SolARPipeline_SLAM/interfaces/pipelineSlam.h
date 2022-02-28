@@ -145,16 +145,12 @@ private:
 private:
 
 	// State flag of the pipeline
-	bool m_stopFlag, m_initOK, m_startedOK, m_isStopMapping;
-
-	// mutex
-	std::mutex globalVarsMutex;
+	bool m_stopFlag, m_initOK, m_startedOK, m_isMappingIdle, m_isLoopIdle;
 
 	// storage components
 	SRef<api::storage::IPointCloudManager>				m_pointCloudManager;
 	SRef<api::storage::IKeyframesManager>				m_keyframesManager;
 	SRef<api::storage::ICovisibilityGraphManager>		m_covisibilityGraphManager;
-	SRef<api::reloc::IKeyframeRetriever>				m_kfRetriever;
 	SRef<api::storage::IMapManager>						m_mapManager;
 
 	// components
@@ -196,13 +192,11 @@ private:
 	datastructure::CamCalibration                       m_calibration;
 	datastructure::CamDistortion                        m_distortion;
 	double												m_bundleReprojError;
-	std::mutex											m_mutexMapping;
 
 	xpcf::DropBuffer< SRef<datastructure::Image>>		m_CameraImagesBuffer;	
 	xpcf::DropBuffer< SRef<datastructure::Frame >>		m_frameBuffer;
 	xpcf::DropBuffer< SRef<datastructure::Frame>>		m_frameBootstrapBuffer;
 	xpcf::DropBuffer<SRef<datastructure::Frame>>		m_addKeyframeBuffer;
-	xpcf::DropBuffer<SRef<datastructure::Keyframe>>		m_newKeyframeBuffer;
 	xpcf::DropBuffer<SRef<datastructure::Keyframe>>		m_newKeyframeLoopBuffer;
 
 	// tasks
