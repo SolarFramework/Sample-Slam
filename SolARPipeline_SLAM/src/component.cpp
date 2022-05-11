@@ -27,7 +27,6 @@ PipelineSlam::PipelineSlam():ConfigurableBase(xpcf::toUUID<PipelineSlam>())
 	declareInjectable<IPointCloudManager>(m_pointCloudManager);
 	declareInjectable<IKeyframesManager>(m_keyframesManager);
 	declareInjectable<ICovisibilityGraphManager>(m_covisibilityGraphManager);
-	declareInjectable<reloc::IKeyframeRetriever>(m_kfRetriever);
 	declareInjectable<IMapManager>(m_mapManager);
 	declareInjectable<solver::map::IBundler>(m_bundler);
 	declareInjectable<solver::map::IBundler>(m_globalBundler, "GlobalBA");
@@ -42,13 +41,7 @@ PipelineSlam::PipelineSlam():ConfigurableBase(xpcf::toUUID<PipelineSlam>())
 	declareInjectable<slam::ITracking>(m_tracking);
 	declareInjectable<slam::IMapping>(m_mapping);
     declareInjectable<sink::ISinkPoseImage>(m_sink);
-    declareInjectable<source::ISourceImage>(m_source);    
-
-    m_bootstrapOk=false;
-	m_stopFlag = false;
-	m_startedOK = false;
-	m_isStopMapping = false;
-
+    declareInjectable<source::ISourceImage>(m_source);        
     LOG_DEBUG(" Pipeline constructor");	
 }
 
@@ -77,8 +70,13 @@ FrameworkReturnCode PipelineSlam::init()
 		m_minWeightNeighbor = m_mapping->bindTo<xpcf::IConfigurable>()->getProperty("minWeightNeighbor")->getFloatingValue();
 		m_reprojErrorThreshold = m_mapManager->bindTo<xpcf::IConfigurable>()->getProperty("reprojErrorThreshold")->getFloatingValue();
 
-        m_initOK = true;	
+		m_bootstrapOk = false;
+		m_stopFlag = false;
+		m_startedOK = false;
+		m_isLoopIdle = true;
+		m_isMappingIdle = true;        	
 		m_haveToBeFlip = false;
+		m_initOK = true;
     }
     catch (xpcf::Exception e)
     {
@@ -125,7 +123,7 @@ FrameworkReturnCode PipelineSlam::start(void* imageDataBuffer)
 			return FrameworkReturnCode::_ERROR_;
 		}
 		m_bootstrapOk = true;
-		m_tracking->updateReferenceKeyframe(m_keyframe2);
+		m_tracking->setNewKeyframe(m_keyframe2);
 	}
 	else
 	{
@@ -271,7 +269,7 @@ void PipelineSlam::doBootStrap()
 	if (m_bootstrapper->process(m_frame, view) == FrameworkReturnCode::_SUCCESS) {
 		double bundleReprojError = m_bundler->bundleAdjustment(m_calibration, m_distortion);
 		m_keyframesManager->getKeyframe(0, m_keyframe2);
-		m_tracking->updateReferenceKeyframe(m_keyframe2);
+		m_tracking->setNewKeyframe(m_keyframe2);
 		m_bootstrapOk = true;
 	}
 	if (!m_poseFrame.isApprox(Transform3Df::Identity())){
@@ -308,21 +306,13 @@ void PipelineSlam::tracking()
 		return;
 	}
 
-	LOG_DEBUG("Number of keypoints: {}", newFrame->getKeypoints().size());
-	SRef<Keyframe> newKeyframe;
-	if (m_newKeyframeBuffer.tryPop(newKeyframe))
-	{
-		m_tracking->updateReferenceKeyframe(newKeyframe);
-		SRef<Frame> tmpFrame;
-		m_addKeyframeBuffer.tryPop(tmpFrame);
-		m_isStopMapping = false;
-	}
 	// tracking
 	SRef<Image>	displayImage;
 	if (m_tracking->process(newFrame, displayImage) == FrameworkReturnCode::_SUCCESS) {
 		m_sink->set(newFrame->getPose(), displayImage);
 		// send frame to mapping task
-		m_addKeyframeBuffer.push(newFrame);
+		if (m_isMappingIdle && m_isLoopIdle && m_tracking->checkNeedNewKeyframe())
+			m_addKeyframeBuffer.push(newFrame);
 	}
 	else
 		m_sink->set(displayImage);
@@ -330,26 +320,21 @@ void PipelineSlam::tracking()
 
 void PipelineSlam::mapping()
 {
-	std::unique_lock<std::mutex> lock(m_mutexMapping);
 	SRef<Frame> newFrame;
-	if (m_stopFlag || !m_initOK || !m_startedOK || m_isStopMapping || !m_addKeyframeBuffer.tryPop(newFrame)) {
+	if (m_stopFlag || !m_initOK || !m_startedOK || !m_addKeyframeBuffer.tryPop(newFrame)) {
 		xpcf::DelegateTask::yield();
 		return;
 	}
-
+	m_isMappingIdle = false;
 	SRef<Keyframe> keyframe;
 	if (m_mapping->process(newFrame, keyframe) == FrameworkReturnCode::_SUCCESS) {
 		LOG_DEBUG("New keyframe id: {}", keyframe->getId());
 		// Local bundle adjustment
-		std::vector<uint32_t> bestIdx, bestIdxToOptimize;
-		m_covisibilityGraphManager->getNeighbors(keyframe->getId(), m_minWeightNeighbor, bestIdx);
-		if (bestIdx.size() < NB_LOCALKEYFRAMES)
-			bestIdxToOptimize = bestIdx;
-		else
-			bestIdxToOptimize.insert(bestIdxToOptimize.begin(), bestIdx.begin(), bestIdx.begin() + NB_LOCALKEYFRAMES);
-		bestIdxToOptimize.push_back(keyframe->getId());
+		std::vector<uint32_t> bestIdx;
+		m_covisibilityGraphManager->getNeighbors(keyframe->getId(), m_minWeightNeighbor, bestIdx, NB_LOCALKEYFRAMES);
+		bestIdx.push_back(keyframe->getId());
 		LOG_DEBUG("Nb keyframe to local bundle: {}", bestIdx.size());
-		double bundleReprojError = m_bundler->bundleAdjustment(m_calibration, m_distortion, bestIdxToOptimize);
+		double bundleReprojError = m_bundler->bundleAdjustment(m_calibration, m_distortion, bestIdx);
 		// local map pruning
 		std::vector<SRef<CloudPoint>> localPointCloud;
 		m_mapManager->getLocalPointCloud(keyframe, 1.0, localPointCloud);
@@ -360,12 +345,10 @@ void PipelineSlam::mapping()
 		LOG_DEBUG("Nb of pruning cloud points / keyframes: {} / {}", nbRemovedCP, nbRemovedKf);
 		m_countNewKeyframes++;
 		m_newKeyframeLoopBuffer.push(keyframe);
+		// send new keyframe to tracking
+		m_tracking->setNewKeyframe(keyframe);
 	}
-
-	if (keyframe) {
-		m_isStopMapping = true;
-		m_newKeyframeBuffer.push(keyframe);
-	}
+	m_isMappingIdle = true;
 }
 
 void PipelineSlam::loopClosure()
@@ -380,12 +363,13 @@ void PipelineSlam::loopClosure()
 	Transform3Df sim3Transform;
 	std::vector<std::pair<uint32_t, uint32_t>> duplicatedPointsIndices;
 	if (m_loopDetector->detect(lastKeyframe, detectedLoopKeyframe, sim3Transform, duplicatedPointsIndices) == FrameworkReturnCode::_SUCCESS) {
+		// stop mapping process
+		m_isLoopIdle = false;
 		// detected loop keyframe
 		LOG_INFO("Detected loop keyframe id: {}", detectedLoopKeyframe->getId());
 		LOG_INFO("Nb of duplicatedPointsIndices: {}", duplicatedPointsIndices.size());
 		LOG_INFO("sim3Transform: \n{}", sim3Transform.matrix());
 		// performs loop correction 			
-		std::unique_lock<std::mutex> lock(m_mutexMapping);
 		m_countNewKeyframes = 0;
 		m_loopCorrector->correct(lastKeyframe, detectedLoopKeyframe, sim3Transform, duplicatedPointsIndices);		
 		// Loop optimisation
@@ -393,6 +377,8 @@ void PipelineSlam::loopClosure()
 		// map pruning
 		m_mapManager->pointCloudPruning();
 		m_mapManager->keyframePruning();
+		// free mapping
+		m_isLoopIdle = true;
 	}
 }
 

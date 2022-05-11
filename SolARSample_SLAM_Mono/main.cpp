@@ -128,7 +128,7 @@ int main(int argc, char **argv) {
 			if (keyframesManager->getKeyframe(0, keyframe2) != FrameworkReturnCode::_SUCCESS)
 				return -1;
 			// Prepare for tracking
-			tracking->updateReferenceKeyframe(keyframe2);
+			tracking->setNewKeyframe(keyframe2);
 			framePoses.push_back(keyframe2->getPose());
 			bootstrapOk = true;
 			LOG_INFO("Number of initial point cloud: {}", pointCloudManager->getNbPoints());
@@ -198,7 +198,7 @@ int main(int argc, char **argv) {
 					frame->setPose(pose);
 				if (bootstrapper->process(frame, displayImage) == FrameworkReturnCode::_SUCCESS) {
 					keyframesManager->getKeyframe(1, keyframe2);
-					tracking->updateReferenceKeyframe(keyframe2);
+					tracking->setNewKeyframe(keyframe2);
 					framePoses.push_back(keyframe2->getPose());
 					bootstrapOk = true;
 					LOG_INFO("Number of initial point cloud: {}", pointCloudManager->getNbPoints());
@@ -209,20 +209,17 @@ int main(int argc, char **argv) {
 				// tracking
 				if (tracking->process(frame, displayImage) == FrameworkReturnCode::_SUCCESS) {
 					// used for display
-					framePoses.push_back(frame->getPose());					
+					framePoses.push_back(frame->getPose());	
 					// mapping
-					if (mapping->process(frame, keyframe) == FrameworkReturnCode::_SUCCESS) {
+					if (tracking->checkNeedNewKeyframe() && 
+						(mapping->process(frame, keyframe) == FrameworkReturnCode::_SUCCESS)) {
 						LOG_DEBUG("New keyframe id: {}", keyframe->getId());
 						// Local bundle adjustment
-						std::vector<uint32_t> bestIdx, bestIdxToOptimize;
-						covisibilityGraphManager->getNeighbors(keyframe->getId(), minWeightNeighbor, bestIdx);
-						if (bestIdx.size() < NB_LOCALKEYFRAMES)
-							bestIdxToOptimize = bestIdx;
-						else
-							bestIdxToOptimize.insert(bestIdxToOptimize.begin(), bestIdx.begin(), bestIdx.begin() + NB_LOCALKEYFRAMES);
-						bestIdxToOptimize.push_back(keyframe->getId());
-						LOG_DEBUG("Nb keyframe to local bundle: {}", bestIdxToOptimize.size());
-						double bundleReprojError = bundler->bundleAdjustment(calibration, distortion, bestIdxToOptimize);
+						std::vector<uint32_t> bestIdx;
+						covisibilityGraphManager->getNeighbors(keyframe->getId(), minWeightNeighbor, bestIdx, NB_LOCALKEYFRAMES);
+						bestIdx.push_back(keyframe->getId());
+						LOG_DEBUG("Nb keyframe to local bundle: {}", bestIdx.size());
+						double bundleReprojError = bundler->bundleAdjustment(calibration, distortion, bestIdx);
 						// local map pruning
 						std::vector<SRef<CloudPoint>> localPointCloud;
 						mapManager->getLocalPointCloud(keyframe, 1.0, localPointCloud);
@@ -252,10 +249,9 @@ int main(int argc, char **argv) {
 								mapManager->keyframePruning();
 							}
 						}
-					}
-					// update reference keyframe
-					if (keyframe) {
-						tracking->updateReferenceKeyframe(keyframe);
+
+						// update reference keyframe to tracking
+						tracking->setNewKeyframe(keyframe);
 					}
 				}				
 			}
