@@ -137,6 +137,14 @@
 			<interface uuid="125f2007-1bf9-421d-9367-fbdc1210d006" name="IComponentIntrospect" description="IComponentIntrospect"/>
 			<interface uuid="6ed0413a-751e-4c33-b91b-97b3ea949bc2" name="ICornerRefinement" description="ICornerRefinement"/>
 		</component> 
+		<component uuid="77a8b776-6b0c-4bc0-b0a8-437a796b8e29" name="SolARFCNSegmentationOpencv" description="SolARFCNSegmentationOpencv">
+			<interface uuid="125f2007-1bf9-421d-9367-fbdc1210d006" name="IComponentIntrospect" description="IComponentIntrospect"/>
+			<interface uuid="2fd30b7c-c6e4-4af7-a711-0b69964e68c2" name="ISemanticSegmentation" description="ISemanticSegmentation"/>
+		</component>
+		<component uuid="ed445504-daba-4855-af88-052d4e3e5b7a" name="SolARMaskOverlayOpencv" description="SolARMaskOverlayOpencv">
+			<interface uuid="125f2007-1bf9-421d-9367-fbdc1210d006" name="IComponentIntrospect" description="IComponentIntrospect"/>
+			<interface uuid="35a2454a-cb09-44ac-b2ce-0b0732175f94" name="IMaskOverlay" description="IMaskOverlay"/>
+		</component>
 	</module>
 	<module uuid="6e960df6-9a36-11e8-9eb6-529269fb1459" name="SolARModuleOpenGL" description="SolARModuleOpenGL" path="$XPCF_MODULE_ROOT/SolARBuild/SolARModuleOpenGL/1.0.0/lib/x86_64/shared">
 		<component uuid="afd38ea0-9a46-11e8-9eb6-529269fb1459" name="SolAR3DPointsViewerOpengl" description="SolAR3DPointsViewerOpengl">
@@ -241,6 +249,8 @@
 			<bind interface="IKeyframesManager" to="SolARKeyframesManager" scope="Singleton"/>
 			<bind interface="ICovisibilityGraphManager" to="SolARCovisibilityGraphManager" scope="Singleton"/>
 			<bind interface="IKeyframeRetriever" to="SolARKeyframeRetrieverFBOW" scope="Singleton"/>
+			<bind interface="ISemanticSegmentation" to="SolARFCNSegmentationOpencv"/>
+			<bind interface="IMaskOverlay" to="SolARMaskOverlayOpencv"/>
 		</bindings>
 		<injects>
 			<inject to="SolARFiducialMarkerPoseEstimator">
@@ -260,8 +270,8 @@
 
 	<properties>
 		<configure component="SolARCameraOpencv">
-			<property name="calibrationFile" type="string" value="camera_calibration.json"/>
-			<property name="deviceID" type="uint" value="0"/>
+			<property name="calibrationFile" type="string" value="D:\SolAR\Data\camera_calibration_rs_D435i_color.json"/>
+			<property name="deviceID" type="uint" value="2"/>
 		</configure>
 		<configure component="SolARImagesAsCameraOpencv">
 			<property name="calibrationFile" type="string" value="path to calibration file"/>
@@ -497,6 +507,13 @@
 				<value>0.182</value>
 				<value>0.182</value>
 			</property>
+		</configure>
+		<configure component="SolARFCNSegmentationOpencv">
+            <property name="modelFile" type="string" value="D:\SolAR\Data\onnx_model_solar\fcn_resnet50.onnx"/>
+        </configure>
+		<configure component="SolARMaskOverlayOpencv">
+			<property name="classFile" type="string" value="D:\SolAR\Data\pascal-classes.txt"/>
+			<property name="colorFile" type="string" value="D:\SolAR\Data\pascal-colors.txt"/>
 		</configure>
 	</properties>
 </xpcf-registry>

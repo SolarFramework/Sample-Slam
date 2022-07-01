@@ -14,6 +14,9 @@
  * limitations under the License.
  */
 
+// if defined will launch semantic segmentation 
+#define SEMANTIC_SEGM
+
 #include <boost/log/core.hpp>
 
 // ADD XPCF HEADERS HERE
@@ -39,6 +42,10 @@
 #include "api/slam/IBootstrapper.h"
 #include "api/slam/ITracking.h"
 #include "api/slam/IMapping.h"
+#ifdef SEMANTIC_SEGM
+#include "api/segm/ISemanticSegmentation.h"
+#include "api/display/IMaskOverlay.h"
+#endif
 
 #define NB_NEWKEYFRAMES_LOOP 10
 #define NB_LOCALKEYFRAMES 10
@@ -92,6 +99,10 @@ int main(int argc, char **argv) {
 		auto bootstrapper = xpcfComponentManager->resolve<slam::IBootstrapper>();
 		auto tracking = xpcfComponentManager->resolve<slam::ITracking>();
 		auto mapping = xpcfComponentManager->resolve<slam::IMapping>();
+#ifdef SEMANTIC_SEGM
+		auto semSeg = xpcfComponentManager->resolve<segm::ISemanticSegmentation>();
+		auto maskOverlay = xpcfComponentManager->resolve<display::IMaskOverlay>();
+#endif 
 		LOG_INFO("Loaded all components");
 
 		// initialize pose estimation with the camera intrinsic parameters (please refer to the use of intrinsic parameters file)
@@ -178,13 +189,16 @@ int main(int argc, char **argv) {
 		while (true)
 		{
             SRef<Image>											view, displayImage;
+#ifdef SEMANTIC_SEGM
+			SRef<Image> mask;
+#endif 
 			std::vector<Keypoint>								keypoints, undistortedKeypoints;
 			SRef<DescriptorBuffer>                              descriptors;
 			SRef<Frame>                                         frame;
 			SRef<Keyframe>										keyframe;
 			// Get current image
 			if (camera->getNextImage(view) != FrameworkReturnCode::_SUCCESS)
-				break;            		
+				break;    
             // feature extraction
 			if (descriptorExtractorFromImage->extract(view, keypoints, descriptors) != FrameworkReturnCode::_SUCCESS)
 				continue;
@@ -252,12 +266,25 @@ int main(int argc, char **argv) {
 
 						// update reference keyframe to tracking
 						tracking->setNewKeyframe(keyframe);
+#ifdef SEMANTIC_SEGM
+						semSeg->segment(view, mask);
+#endif 
 					}
 				}				
 			}
+			
 			// draw cube
 			if (!frame->getPose().isApprox(Transform3Df::Identity()))
+			{
+#ifdef SEMANTIC_SEGM
+				if (mask) {
+					maskOverlay->draw(displayImage, mask);
+					// write as PNG files 
+					displayImage->save("semantic_" + std::to_string(countNewKeyframes) + ".png");
+				}
+#endif
 				overlay3D->draw(frame->getPose(), displayImage);
+			}
 			// display matches and a cube on the origin of coordinate system
 			if (imageViewer->display(displayImage) == FrameworkReturnCode::_STOP)
 				break;	
