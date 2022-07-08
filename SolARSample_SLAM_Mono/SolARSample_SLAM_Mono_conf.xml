@@ -271,7 +271,7 @@
 	<properties>
 		<configure component="SolARCameraOpencv">
 			<property name="calibrationFile" type="string" value="D:\SolAR\Data\camera_calibration_rs_D435i_color.json"/>
-			<property name="deviceID" type="uint" value="2"/>
+			<property name="deviceID" type="uint" value="0"/>
 		</configure>
 		<configure component="SolARImagesAsCameraOpencv">
 			<property name="calibrationFile" type="string" value="path to calibration file"/>
