@@ -88,7 +88,7 @@ int main(int argc, char **argv) {
 		auto keyframeRetriever = xpcfComponentManager->resolve<IKeyframeRetriever>();
 		auto mapManager = xpcfComponentManager->resolve<IMapManager>();      
         auto descriptorExtractorFromImage = xpcfComponentManager->resolve<features::IDescriptorsExtractorFromImage>();
-		auto imageViewer = xpcfComponentManager->resolve<display::IImageViewer>();
+		auto imageViewer = xpcfComponentManager->resolve<display::IImageViewer>("slam");
 		auto viewer3DPoints = xpcfComponentManager->resolve<display::I3DPointsViewer>();
 		auto loopDetector = xpcfComponentManager->resolve<loop::ILoopClosureDetector>();
 		auto loopCorrector = xpcfComponentManager->resolve<loop::ILoopCorrector>();
@@ -103,19 +103,7 @@ int main(int argc, char **argv) {
 #ifdef SEMANTIC_ID
 		auto segmentor = xpcfComponentManager->resolve<segm::ISemanticSegmentation>();
 		auto maskOverlay = xpcfComponentManager->resolve<display::IMaskOverlay>();
-		std::string pathColorMap = maskOverlay->bindTo<xpcf::IConfigurable>()->getProperty("colorFile")->getStringValue();
-		// Load the colors	
-		std::vector<Vector3f> colors;
-		std::ifstream colorFptr(pathColorMap.c_str());
-		std::string line;
-		while (std::getline(colorFptr, line)) {
-			std::istringstream iss(line);
-			float r, g, b;
-			iss >> r >> g >> b;
-			colors.emplace_back(r, g, b);
-		}
-		if (!std::filesystem::exists("tmp"))
-			std::filesystem::create_directory("tmp");
+		auto imageViewer2 = xpcfComponentManager->resolve<display::IImageViewer>("segmentation");
 #endif 
 		LOG_INFO("Loaded all components");
 
@@ -219,12 +207,12 @@ int main(int argc, char **argv) {
 				for (auto& kp : keypoints) {
 					int classId = static_cast<int>(mask->getPixel<uint8_t>(static_cast<int>(kp.getY()), static_cast<int>(kp.getX())));
 					kp.setClassId(classId);
-					kp.setRGB(colors[classId](0), colors[classId](1), colors[classId](2));
 				}
 				// write segment result to PNG
 				SRef<Image> view2 = view->copy();
 				maskOverlay->draw(view2, mask);
-				view2->save("tmp/segment_" + std::to_string(count) + ".png");
+				if (imageViewer2->display(view2) == FrameworkReturnCode::_STOP)
+					break;
 			}
 #endif
 			// undistort keypoints

@@ -251,6 +251,8 @@
 			<bind interface="IKeyframeRetriever" to="SolARKeyframeRetrieverFBOW" scope="Singleton"/>
 			<bind interface="ISemanticSegmentation" to="SolARFCNSegmentationOpencv"/>
 			<bind interface="IMaskOverlay" to="SolARMaskOverlayOpencv"/>
+			<bind interface="IImageViewer" to="SolARImageViewerOpencv" name="slam" properties="slam"/>
+			<bind interface="IImageViewer" to="SolARImageViewerOpencv" name="segmentation" properties="segmentation"/>
 		</bindings>
 		<injects>
 			<inject to="SolARFiducialMarkerPoseEstimator">
@@ -420,8 +422,14 @@
 			<property name="fixedMap" type="int" value="0"/>
 			<property name="fixedKeyframes" type="int" value="0"/>
 		</configure>
-		<configure component="SolARImageViewerOpencv">
+		<configure component="SolARImageViewerOpencv" name="slam">
 			<property name="title" type="string" value="SLAM (press esc to exit)"/>
+			<property name="exitKey" type="int" value="27"/>
+			<property name="width" type="int" value="640"/>
+			<property name="height" type="int" value="480"/>
+		</configure>
+		<configure component="SolARImageViewerOpencv" name="segmentation">
+			<property name="title" type="string" value="Semantic segmentation (press esc to exit)"/>
 			<property name="exitKey" type="int" value="27"/>
 			<property name="width" type="int" value="640"/>
 			<property name="height" type="int" value="480"/>
@@ -435,6 +443,8 @@
 				<value>0</value>
 				<value>0</value>
 			</property>
+			<property name="pointsColorFromClassLabel" type="uint" value="0"/>
+			<property name="classLabelColorMapPath" type="string" value="path to class label color map"/>
 			<property name="fixedPointsColor" type="uint" value="0"/>
 			<property name="pointsColor" type="uint">
 				<value>0</value>
