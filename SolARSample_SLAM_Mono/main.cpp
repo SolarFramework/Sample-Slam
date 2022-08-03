@@ -201,20 +201,6 @@ int main(int argc, char **argv) {
             // feature extraction
 			if (descriptorExtractorFromImage->extract(view, keypoints, descriptors) != FrameworkReturnCode::_SUCCESS)
 				continue;
-#ifdef SEMANTIC_ID
-			SRef<Image> mask;
-			if (segmentor->segment(view, mask) == FrameworkReturnCode::_SUCCESS) {
-				for (auto& kp : keypoints) {
-					int classId = static_cast<int>(mask->getPixel<uint8_t>(static_cast<int>(kp.getY()), static_cast<int>(kp.getX())));
-					kp.setClassId(classId);
-				}
-				// write segment result to PNG
-				SRef<Image> view2 = view->copy();
-				maskOverlay->draw(view2, mask);
-				if (imageViewer2->display(view2) == FrameworkReturnCode::_STOP)
-					break;
-			}
-#endif
 			// undistort keypoints
 			undistortKeypoints->undistort(keypoints, undistortedKeypoints);
             frame = xpcf::utils::make_shared<Frame>(keypoints, undistortedKeypoints, descriptors, view);
@@ -227,6 +213,23 @@ int main(int argc, char **argv) {
 					keyframesManager->getKeyframe(1, keyframe2);
 					tracking->setNewKeyframe(keyframe2);
 					framePoses.push_back(keyframe2->getPose());
+#ifdef SEMANTIC_ID
+					for (int d = 0; d < 2; d++) {  // segment 1st and 2nd keyframe
+						keyframesManager->getKeyframe(d, keyframe2);
+						SRef<Image> mask;
+						if (segmentor->segment(keyframe2->getView(), mask) == FrameworkReturnCode::_SUCCESS) {
+							for (int i = 0; i < static_cast<int>(keyframe2->getKeypoints().size()); i++) {
+								int classId = static_cast<int>(mask->getPixel<uint8_t>(static_cast<int>(keyframe2->getKeypoint(i).getY()), 
+									static_cast<int>(keyframe2->getKeypoint(i).getX())));
+								keyframe2->updateKeypointClassId(i, classId);
+							}
+							SRef<Image> view2 = keyframe2->getView()->copy();
+							maskOverlay->draw(view2, mask);
+							if (imageViewer2->display(view2) == FrameworkReturnCode::_STOP)
+								break;
+						}
+					}
+#endif
 					bootstrapOk = true;
 					LOG_INFO("Number of initial point cloud: {}", pointCloudManager->getNbPoints());
 					LOG_INFO("Number of initial keyframes: {}", keyframesManager->getNbKeyframes());
@@ -238,47 +241,62 @@ int main(int argc, char **argv) {
 					// used for display
 					framePoses.push_back(frame->getPose());	
 					// mapping
-					if (tracking->checkNeedNewKeyframe() && 
-						(mapping->process(frame, keyframe) == FrameworkReturnCode::_SUCCESS)) {
-						LOG_DEBUG("New keyframe id: {}", keyframe->getId());
-						// Local bundle adjustment
-						std::vector<uint32_t> bestIdx;
-						covisibilityGraphManager->getNeighbors(keyframe->getId(), minWeightNeighbor, bestIdx, NB_LOCALKEYFRAMES);
-						bestIdx.push_back(keyframe->getId());
-						LOG_DEBUG("Nb keyframe to local bundle: {}", bestIdx.size());
-						double bundleReprojError = bundler->bundleAdjustment(calibration, distortion, bestIdx);
-						// local map pruning
-						std::vector<SRef<CloudPoint>> localPointCloud;
-						mapManager->getLocalPointCloud(keyframe, 1.0, localPointCloud);
-						int nbRemovedCP = mapManager->pointCloudPruning(localPointCloud);
-						std::vector<SRef<Keyframe>> localKeyframes;
-						keyframesManager->getKeyframes(bestIdx, localKeyframes);
-						int nbRemovedKf = mapManager->keyframePruning(localKeyframes);
-						LOG_DEBUG("Nb of pruning cloud points / keyframes: {} / {}", nbRemovedCP, nbRemovedKf);
-						// loop closure
-						countNewKeyframes++;
-						if (countNewKeyframes >= NB_NEWKEYFRAMES_LOOP) {
-							SRef<Keyframe> detectedLoopKeyframe;
-							Transform3Df sim3Transform;
-							std::vector<std::pair<uint32_t, uint32_t>> duplicatedPointsIndices;
-							if (loopDetector->detect(keyframe, detectedLoopKeyframe, sim3Transform, duplicatedPointsIndices) == FrameworkReturnCode::_SUCCESS) {
-								// detected loop keyframe
-								LOG_INFO("Detected loop keyframe id: {}", detectedLoopKeyframe->getId());
-								LOG_INFO("Nb of duplicatedPointsIndices: {}", duplicatedPointsIndices.size());
-								LOG_INFO("sim3Transform: \n{}", sim3Transform.matrix());
-								// performs loop correction 
-								countNewKeyframes = 0;
-								loopCorrector->correct(keyframe, detectedLoopKeyframe, sim3Transform, duplicatedPointsIndices);
-								// Loop optimisation
-								bundler->bundleAdjustment(calibration, distortion);
-								// map pruning
-								mapManager->pointCloudPruning();
-								mapManager->keyframePruning();
+					if (tracking->checkNeedNewKeyframe()) {
+#ifdef SEMANTIC_ID
+						SRef<Image> mask;
+						if (segmentor->segment(frame->getView(), mask) == FrameworkReturnCode::_SUCCESS) {
+							for (int i = 0; i < static_cast<int>(frame->getKeypoints().size()); i++) {
+								int classId = static_cast<int>(mask->getPixel<uint8_t>(static_cast<int>(frame->getKeypoint(i).getY()),
+									static_cast<int>(frame->getKeypoint(i).getX())));
+								frame->updateKeypointClassId(i, classId);
 							}
+							SRef<Image> view2 = frame->getView()->copy();
+							maskOverlay->draw(view2, mask);
+							if (imageViewer2->display(view2) == FrameworkReturnCode::_STOP)
+								break;
 						}
+#endif 
+						if (mapping->process(frame, keyframe) == FrameworkReturnCode::_SUCCESS) {
+							LOG_DEBUG("New keyframe id: {}", keyframe->getId());
+							// Local bundle adjustment
+							std::vector<uint32_t> bestIdx;
+							covisibilityGraphManager->getNeighbors(keyframe->getId(), minWeightNeighbor, bestIdx, NB_LOCALKEYFRAMES);
+							bestIdx.push_back(keyframe->getId());
+							LOG_DEBUG("Nb keyframe to local bundle: {}", bestIdx.size());
+							double bundleReprojError = bundler->bundleAdjustment(calibration, distortion, bestIdx);
+							// local map pruning
+							std::vector<SRef<CloudPoint>> localPointCloud;
+							mapManager->getLocalPointCloud(keyframe, 1.0, localPointCloud);
+							int nbRemovedCP = mapManager->pointCloudPruning(localPointCloud);
+							std::vector<SRef<Keyframe>> localKeyframes;
+							keyframesManager->getKeyframes(bestIdx, localKeyframes);
+							int nbRemovedKf = mapManager->keyframePruning(localKeyframes);
+							LOG_DEBUG("Nb of pruning cloud points / keyframes: {} / {}", nbRemovedCP, nbRemovedKf);
+							// loop closure
+							countNewKeyframes++;
+							if (countNewKeyframes >= NB_NEWKEYFRAMES_LOOP) {
+								SRef<Keyframe> detectedLoopKeyframe;
+								Transform3Df sim3Transform;
+								std::vector<std::pair<uint32_t, uint32_t>> duplicatedPointsIndices;
+								if (loopDetector->detect(keyframe, detectedLoopKeyframe, sim3Transform, duplicatedPointsIndices) == FrameworkReturnCode::_SUCCESS) {
+									// detected loop keyframe
+									LOG_INFO("Detected loop keyframe id: {}", detectedLoopKeyframe->getId());
+									LOG_INFO("Nb of duplicatedPointsIndices: {}", duplicatedPointsIndices.size());
+									LOG_INFO("sim3Transform: \n{}", sim3Transform.matrix());
+									// performs loop correction 
+									countNewKeyframes = 0;
+									loopCorrector->correct(keyframe, detectedLoopKeyframe, sim3Transform, duplicatedPointsIndices);
+									// Loop optimisation
+									bundler->bundleAdjustment(calibration, distortion);
+									// map pruning
+									mapManager->pointCloudPruning();
+									mapManager->keyframePruning();
+								}
+							}
 
-						// update reference keyframe to tracking
-						tracking->setNewKeyframe(keyframe);
+							// update reference keyframe to tracking
+							tracking->setNewKeyframe(keyframe);
+						}
 					}
 				}				
 			}

@@ -141,6 +141,10 @@
 			<interface uuid="125f2007-1bf9-421d-9367-fbdc1210d006" name="IComponentIntrospect" description="IComponentIntrospect"/>
 			<interface uuid="2fd30b7c-c6e4-4af7-a711-0b69964e68c2" name="ISemanticSegmentation" description="ISemanticSegmentation"/>
 		</component>
+		<component uuid="063d3086-6c87-49ff-87db-9a4ff224b5c8" name="SolARDeepLabV3PlusSegmentationOpencv" description="SolARDeepLabV3PlusSegmentationOpencv">
+			<interface uuid="125f2007-1bf9-421d-9367-fbdc1210d006" name="IComponentIntrospect" description="IComponentIntrospect"/>
+			<interface uuid="2fd30b7c-c6e4-4af7-a711-0b69964e68c2" name="ISemanticSegmentation" description="ISemanticSegmentation"/>
+		</component>
 		<component uuid="ed445504-daba-4855-af88-052d4e3e5b7a" name="SolARMaskOverlayOpencv" description="SolARMaskOverlayOpencv">
 			<interface uuid="125f2007-1bf9-421d-9367-fbdc1210d006" name="IComponentIntrospect" description="IComponentIntrospect"/>
 			<interface uuid="35a2454a-cb09-44ac-b2ce-0b0732175f94" name="IMaskOverlay" description="IMaskOverlay"/>
@@ -250,6 +254,7 @@
 			<bind interface="ICovisibilityGraphManager" to="SolARCovisibilityGraphManager" scope="Singleton"/>
 			<bind interface="IKeyframeRetriever" to="SolARKeyframeRetrieverFBOW" scope="Singleton"/>
 			<bind interface="ISemanticSegmentation" to="SolARFCNSegmentationOpencv"/>
+			<!--bind interface="ISemanticSegmentation" to="SolARDeepLabV3PlusSegmentationOpencv"/-->
 			<bind interface="IMaskOverlay" to="SolARMaskOverlayOpencv"/>
 			<bind interface="IImageViewer" to="SolARImageViewerOpencv" name="slam" properties="slam"/>
 			<bind interface="IImageViewer" to="SolARImageViewerOpencv" name="segmentation" properties="segmentation"/>
@@ -521,9 +526,24 @@
 		<configure component="SolARFCNSegmentationOpencv">
             <property name="modelFile" type="string" value="D:\SolAR\Data\onnx_model_solar\fcn_resnet50.onnx"/>
         </configure>
+		<configure component="SolARDeepLabV3PlusSegmentationOpencv">
+            <property name="modelFile" type="string" value="D:/SolAR/Data/onnx_model_solar/deeplabv3plus_r50_d8_ade20k_512x512.onnx"/>
+			<property name="mean" type="float" description="normalize input RGB image by subtracting mean">
+				<value>123.675</value>
+				<value>116.28</value>
+				<value>103.53</value>
+			</property>
+			<property name="std" type="float" description="normalize input RGB image by dividing std">
+				<value>58.395</value>
+				<value>57.12</value>
+				<value>57.375</value>
+			</property>
+        </configure>
 		<configure component="SolARMaskOverlayOpencv">
 			<property name="classFile" type="string" value="D:\SolAR\Data\pascal-classes.txt"/>
 			<property name="colorFile" type="string" value="D:\SolAR\Data\pascal-colors.txt"/>
+			<!--property name="classFile" type="string" value="D:\SolAR\Data\ade20k-classes.txt"/-->
+			<!--property name="colorFile" type="string" value="D:\SolAR\Data\ade20k-colors.txt"/-->
 		</configure>
 	</properties>
 </xpcf-registry>
