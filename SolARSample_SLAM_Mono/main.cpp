@@ -14,9 +14,6 @@
  * limitations under the License.
  */
 
-// if defined will assign class id to key point  
-#define SEMANTIC_ID
-
 #include <boost/log/core.hpp>
 
 // ADD XPCF HEADERS HERE
@@ -42,8 +39,10 @@
 #include "api/slam/IBootstrapper.h"
 #include "api/slam/ITracking.h"
 #include "api/slam/IMapping.h"
+
+// if defined will assign class id to key point  
+#define SEMANTIC_ID
 #ifdef SEMANTIC_ID
-#include <filesystem>
 #include "api/segm/ISemanticSegmentation.h"
 #include "api/display/IMaskOverlay.h"
 #endif
@@ -104,6 +103,21 @@ int main(int argc, char **argv) {
 		auto segmentor = xpcfComponentManager->resolve<segm::ISemanticSegmentation>();
 		auto maskOverlay = xpcfComponentManager->resolve<display::IMaskOverlay>();
 		auto imageViewer2 = xpcfComponentManager->resolve<display::IImageViewer>("segmentation");
+		auto fnSegment = [&segmentor, &maskOverlay, &imageViewer2](SRef<Frame> frame) {
+			SRef<Image> mask;
+			if (segmentor->segment(frame->getView(), mask) != FrameworkReturnCode::_SUCCESS)
+				return false;
+			for (int i = 0; i < static_cast<int>(frame->getKeypoints().size()); i++) {
+				int classId = static_cast<int>(mask->getPixel<uint8_t>(static_cast<int>(frame->getKeypoint(i).getY()),
+					static_cast<int>(frame->getKeypoint(i).getX())));
+				frame->updateKeypointClassId(i, classId);
+			}
+			SRef<Image> view2 = frame->getView()->copy();
+			maskOverlay->draw(view2, mask);
+			if (imageViewer2->display(view2) == FrameworkReturnCode::_STOP)
+				return false;
+			return true;
+		};
 #endif 
 		LOG_INFO("Loaded all components");
 
@@ -214,21 +228,11 @@ int main(int argc, char **argv) {
 					tracking->setNewKeyframe(keyframe2);
 					framePoses.push_back(keyframe2->getPose());
 #ifdef SEMANTIC_ID
-					for (int d = 0; d < 2; d++) {  // segment 1st and 2nd keyframe
-						keyframesManager->getKeyframe(d, keyframe2);
-						SRef<Image> mask;
-						if (segmentor->segment(keyframe2->getView(), mask) == FrameworkReturnCode::_SUCCESS) {
-							for (int i = 0; i < static_cast<int>(keyframe2->getKeypoints().size()); i++) {
-								int classId = static_cast<int>(mask->getPixel<uint8_t>(static_cast<int>(keyframe2->getKeypoint(i).getY()), 
-									static_cast<int>(keyframe2->getKeypoint(i).getX())));
-								keyframe2->updateKeypointClassId(i, classId);
-							}
-							SRef<Image> view2 = keyframe2->getView()->copy();
-							maskOverlay->draw(view2, mask);
-							if (imageViewer2->display(view2) == FrameworkReturnCode::_STOP)
-								break;
-						}
-					}
+					SRef<Keyframe> keyframe0, keyframe1;
+					keyframesManager->getKeyframe(0, keyframe0);
+					keyframesManager->getKeyframe(1, keyframe1);
+					if (!fnSegment(boost::static_pointer_cast<Frame>(keyframe0)) || !fnSegment(boost::static_pointer_cast<Frame>(keyframe1)))
+						break;
 #endif
 					bootstrapOk = true;
 					LOG_INFO("Number of initial point cloud: {}", pointCloudManager->getNbPoints());
@@ -243,18 +247,8 @@ int main(int argc, char **argv) {
 					// mapping
 					if (tracking->checkNeedNewKeyframe()) {
 #ifdef SEMANTIC_ID
-						SRef<Image> mask;
-						if (segmentor->segment(frame->getView(), mask) == FrameworkReturnCode::_SUCCESS) {
-							for (int i = 0; i < static_cast<int>(frame->getKeypoints().size()); i++) {
-								int classId = static_cast<int>(mask->getPixel<uint8_t>(static_cast<int>(frame->getKeypoint(i).getY()),
-									static_cast<int>(frame->getKeypoint(i).getX())));
-								frame->updateKeypointClassId(i, classId);
-							}
-							SRef<Image> view2 = frame->getView()->copy();
-							maskOverlay->draw(view2, mask);
-							if (imageViewer2->display(view2) == FrameworkReturnCode::_STOP)
-								break;
-						}
+						if (!fnSegment(frame))
+							break;
 #endif 
 						if (mapping->process(frame, keyframe) == FrameworkReturnCode::_SUCCESS) {
 							LOG_DEBUG("New keyframe id: {}", keyframe->getId());
