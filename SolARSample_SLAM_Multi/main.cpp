@@ -98,18 +98,9 @@ int main(int argc, char **argv) {
 		auto mapping = xpcfComponentManager->resolve<slam::IMapping>();
 		LOG_INFO("Loaded all components");
 
-		// initialize pose estimation with the camera intrinsic parameters (please refeer to the use of intrinsec parameters file)
-		CamCalibration calibration = camera->getIntrinsicsParameters();
-		CamDistortion distortion = camera->getDistortionParameters();
-		overlay3D->setCameraParameters(calibration, distortion);
-		loopDetector->setCameraParameters(calibration, distortion);
-		loopCorrector->setCameraParameters(calibration, distortion);
-		fiducialMarkerPoseEstimator->setCameraParameters(calibration, distortion);
-		undistortKeypoints->setCameraParameters(calibration, distortion);
-		bootstrapper->setCameraParameters(calibration, distortion);
-		tracking->setCameraParameters(calibration, distortion);
-		mapping->setCameraParameters(camera->getParameters());
-		LOG_DEBUG("Intrincic parameters : \n {}", calibration);
+		// get camera parameters
+		CameraParameters camParams = camera->getParameters();
+		LOG_DEBUG("Intrincic\Distortion parameters : \n{}\n\n{}", camParams.intrinsic, camParams.distortion);
 
 		// get properties
 		float minWeightNeighbor = mapping->bindTo<xpcf::IConfigurable>()->getProperty("minWeightNeighbor")->getFloatingValue();
@@ -220,8 +211,9 @@ int main(int argc, char **argv) {
 			std::vector<Keypoint> keypoints, undistortedKeypoints;
 			SRef<DescriptorBuffer> descriptors;
 			if (descriptorExtractor->extract(image, keypoints, descriptors) == FrameworkReturnCode::_SUCCESS) {
-				undistortKeypoints->undistort(keypoints, undistortedKeypoints);
+				undistortKeypoints->undistort(keypoints, camParams, undistortedKeypoints);
 				SRef<Frame> frame = xpcf::utils::make_shared<Frame>(keypoints, undistortedKeypoints, descriptors, image);
+				frame->setCameraParameters(camParams);
 				if (bootstrapOk)
 					m_dropBufferFrameTracking.push(frame);
 				else
@@ -239,10 +231,10 @@ int main(int argc, char **argv) {
 			}
 			SRef<Image> view;
 			Transform3Df pose = Transform3Df::Identity();
-			fiducialMarkerPoseEstimator->estimate(frame->getView(), pose);
+			fiducialMarkerPoseEstimator->estimate(frame->getView(), frame->getCameraParameters(), pose);
 			frame->setPose(pose);
 			if (bootstrapper->process(frame, view) == FrameworkReturnCode::_SUCCESS) {
-				double bundleReprojError = bundler->bundleAdjustment(calibration, distortion);
+				double bundleReprojError = bundler->bundleAdjustment();
 				keyframesManager->getKeyframe(1, keyframe2);
 				tracking->setNewKeyframe(keyframe2);
 				framePoses.push_back(keyframe2->getPose());
@@ -251,7 +243,7 @@ int main(int argc, char **argv) {
 				bootstrapOk = true;
 			}
 			if (!pose.isApprox(Transform3Df::Identity()))
-				overlay3D->draw(pose, view);
+				overlay3D->draw(pose, frame->getCameraParameters(), view);
 			m_dropBufferDisplay.push(view);
 		};
 
@@ -269,7 +261,7 @@ int main(int argc, char **argv) {
 				// used for display
 				framePoses.push_back(frame->getPose());
 				// draw cube
-				overlay3D->draw(frame->getPose(), displayImage);
+				overlay3D->draw(frame->getPose(), frame->getCameraParameters(), displayImage);
 				// send frame to mapping task
 				if (isMappingIdle && isLoopIdle && tracking->checkNeedNewKeyframe())
 					m_dropBufferAddKeyframe.push(frame);
@@ -295,7 +287,7 @@ int main(int argc, char **argv) {
 				covisibilityGraphManager->getNeighbors(keyframe->getId(), minWeightNeighbor, bestIdx, NB_LOCALKEYFRAMES);
 				bestIdx.push_back(keyframe->getId());
 				LOG_DEBUG("Nb keyframe to local bundle: {}", bestIdx.size());
-				double bundleReprojError = bundler->bundleAdjustment(calibration, distortion, bestIdx);
+				double bundleReprojError = bundler->bundleAdjustment(bestIdx);
 				// local map pruning
 				std::vector<SRef<CloudPoint>> localPointCloud;
 				mapManager->getLocalPointCloud(keyframe, 1.0, localPointCloud);
@@ -334,7 +326,7 @@ int main(int argc, char **argv) {
 				loopCorrector->correct(lastKeyframe, detectedLoopKeyframe, sim3Transform, duplicatedPointsIndices);
 				countNewKeyframes = 0;
 				// Loop optimisation
-				globalBundler->bundleAdjustment(calibration, distortion);
+				globalBundler->bundleAdjustment();
 				LOG_DEBUG("Global BA done");
 				// map pruning
 				mapManager->pointCloudPruning();
@@ -394,7 +386,7 @@ int main(int argc, char **argv) {
 		printf("Number of processed frame per second : %8.2f\n", count / duration);
 
 		// run global BA before exit
-		bundler->bundleAdjustment(calibration, distortion);
+		bundler->bundleAdjustment();
 		// map pruning
 		mapManager->pointCloudPruning();
 		mapManager->keyframePruning();
