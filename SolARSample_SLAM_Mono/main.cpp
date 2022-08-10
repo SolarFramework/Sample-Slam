@@ -215,6 +215,8 @@ int main(int argc, char **argv) {
             // feature extraction
 			if (descriptorExtractorFromImage->extract(view, keypoints, descriptors) != FrameworkReturnCode::_SUCCESS)
 				continue;
+			// set keypoints' class id to -1 which means no semantic information
+			std::for_each(keypoints.begin(), keypoints.end(), [](auto& p) { p.setClassId(-1); });
 			// undistort keypoints
 			undistortKeypoints->undistort(keypoints, undistortedKeypoints);
             frame = xpcf::utils::make_shared<Frame>(keypoints, undistortedKeypoints, descriptors, view);
@@ -233,6 +235,23 @@ int main(int argc, char **argv) {
 					keyframesManager->getKeyframe(1, keyframe1);
 					if (!fnSegment(boost::static_pointer_cast<Frame>(keyframe0)) || !fnSegment(boost::static_pointer_cast<Frame>(keyframe1)))
 						break;
+					// filter points using semantic id 
+					std::vector<SRef<CloudPoint>> pointCloud;
+					pointCloudManager->getAllPoints(pointCloud);
+					std::vector<uint32_t> ptsIdToRemove;
+					for (uint32_t i = 0; i < static_cast<uint32_t>(pointCloud.size()); i++) {
+						auto visibility = pointCloud[i]->getVisibility();
+						if (keyframe0->getUndistortedKeypoint(visibility[0]).getClassId() != keyframe1->getUndistortedKeypoint(visibility[1]).getClassId())
+							ptsIdToRemove.push_back(i);
+					}
+					LOG_INFO("Number of 3D points to remove after semantic id filtering: {}", ptsIdToRemove.size());
+					pointCloudManager->suppressPoints(ptsIdToRemove);
+					pointCloud.resize(0);
+					pointCloudManager->getAllPoints(pointCloud);
+					for (auto& pt : pointCloud) {
+						auto visibility = pt->getVisibility();
+						pt->setSemanticId(keyframe0->getUndistortedKeypoint(visibility[0]).getClassId());
+					}				
 #endif
 					bootstrapOk = true;
 					LOG_INFO("Number of initial point cloud: {}", pointCloudManager->getNbPoints());
