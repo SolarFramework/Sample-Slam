@@ -15,6 +15,7 @@
 *.lo
 *.o
 *.obj
+**/.build-rules/
 
 # Precompiled Headers
 *.gch
