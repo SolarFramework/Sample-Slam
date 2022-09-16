@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
 <xpcf-registry autoAlias="true">  
-<!--module uuid="fde83ee6-3e22-4531-9e1c-54cb0a3bf3fa" name="SolARModuleOpenCVCuda" description="SolARModuleOpenCVCuda" path="$XPCF_MODULE_ROOT/SolARBuild/SolARModuleOpenCVCuda/1.0.0/lib/x86_64/shared"-->
+	<!--module uuid="fde83ee6-3e22-4531-9e1c-54cb0a3bf3fa" name="SolARModuleOpenCVCuda" description="SolARModuleOpenCVCuda" path="$XPCF_MODULE_ROOT/SolARBuild/SolARModuleOpenCVCuda/1.0.0/lib/x86_64/shared"-->
 	<module uuid="15e1990b-86b2-445c-8194-0cbe80ede970" name="SolARModuleOpenCV" description="SolARModuleOpenCV" path="$XPCF_MODULE_ROOT/SolARBuild/SolARModuleOpenCV/1.0.0/lib/x86_64/shared">
 		<component uuid="5B7396F4-A804-4F3C-A0EB-FB1D56042BB4" name="SolARCameraOpencv" description="SolARCameraOpencv">
 			<interface uuid="125f2007-1bf9-421d-9367-fbdc1210d006" name="IComponentIntrospect" description="IComponentIntrospect"/>
@@ -287,8 +287,8 @@
 			<property name="delayTime" type="int" value="30"/>
 		</configure>
 		<configure component="SolARVideoAsCameraOpencv">
-			<property name="calibrationFile" type="string" value="../../../../data/camera_calibration_rs_D435i_color.json"/>
-			<property name="videoPath" type="string" value="../../../../data/data1.avi"/>
+			<property name="calibrationFile" type="string" value="../../../../data/camera_calibration.json"/>
+			<property name="videoPath" type="string" value="../../../../data/logitech_data1.avi"/>
 			<property name="delayTime" type="int" value="30"/>
 		</configure>
 		<configure component="SolARSLAMBootstrapper">
@@ -450,7 +450,7 @@
 				<value>0</value>
 			</property>
 			<property name="pointsColorFromClassLabel" type="uint" value="1"/>
-			<property name="classLabelColorMapPath" type="string" value="../../../../data/pascalcontext59-colors.txt"/>
+			<property name="classLabelColorMapPath" type="string" value="../../../../data/cocostuff164k-colors.txt"/>
 			<property name="fixedPointsColor" type="uint" value="0"/>
 			<property name="pointsColor" type="uint">
 				<value>0</value>
@@ -528,7 +528,7 @@
             <property name="modelFile" type="string" value="../../../../data/fcn_resnet50.onnx"/>
         </configure>
 		<configure component="SolARGenericSemanticSegmentationOpencv">
-            <property name="modelFile" type="string" value="../../../../data/fcn_r101-d8_480x480_80k_pascal_context_59_512x512_noArgMax.onnx"/>
+            <property name="modelFile" type="string" value="../../../../data/pspnet_r50-d8_512x512_4x4_80k_coco-stuff164k_argmax_removed.onnx"/>
 			<property name="argMaxRemoved" type="int" value="1"/>
 			<property name="mean" type="float" description="normalize input RGB image by subtracting mean">
 				<value>123.675</value>
@@ -546,10 +546,13 @@
 			</property>
         </configure>
 		<configure component="SolARMaskOverlayOpencv">
-			<!--property name="classFile" type="string" value="../../../../data/pascal-classes.txt"/-->
-			<!--property name="colorFile" type="string" value="../../../../data/pascal-colors.txt"/-->
-			<property name="classFile" type="string" value="../../../../data/pascalcontext59-classes.txt"/>
-			<property name="colorFile" type="string" value="../../../../data/pascalcontext59-colors.txt"/>
+			<property name="classFile" type="string" value="../../../../data/cocostuff164k-classes.txt"/>
+			<property name="colorFile" type="string" value="../../../../data/cocostuff164k-colors.txt"/>
+			<property name="otherClassColor" type="uint" description="in colorFile the RGB color that represents all other classes (one color for multiple unimportant classes)">
+				<value>255</value>
+				<value>255</value>
+				<value>255</value>
+			</property>
 		</configure>
 	</properties>
 </xpcf-registry>

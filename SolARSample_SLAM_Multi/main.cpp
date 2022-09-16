@@ -82,12 +82,12 @@ int main(int argc, char **argv) {
 
 		// declare and create components
 		LOG_INFO("Start creating components");
+		auto camera = xpcfComponentManager->resolve<input::devices::ICamera>();
 		auto pointCloudManager = xpcfComponentManager->resolve<IPointCloudManager>();
 		auto keyframesManager = xpcfComponentManager->resolve<IKeyframesManager>();
 		auto covisibilityGraphManager = xpcfComponentManager->resolve<ICovisibilityGraphManager>();
 		auto keyframeRetriever = xpcfComponentManager->resolve<IKeyframeRetriever>();
 		auto mapManager = xpcfComponentManager->resolve<IMapManager>();
-		auto camera = xpcfComponentManager->resolve<input::devices::ICamera>();
 		auto descriptorExtractor = xpcfComponentManager->resolve<features::IDescriptorsExtractorFromImage>();
 		auto imageViewer = xpcfComponentManager->resolve<display::IImageViewer>("slam");
 		auto viewer3DPoints = xpcfComponentManager->resolve<display::I3DPointsViewer>();
