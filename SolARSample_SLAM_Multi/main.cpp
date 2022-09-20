@@ -42,7 +42,7 @@
 #include "api/slam/IMapping.h"
 
 // IF SEMANTIC SEGMENTATION 
-#define SEMANTIC_ID
+//#define SEMANTIC_ID
 #ifdef SEMANTIC_ID
 #include "api/segm/ISemanticSegmentation.h"
 #include "api/display/IMaskOverlay.h"
@@ -280,23 +280,15 @@ int main(int argc, char **argv) {
 				std::array<SRef<Keyframe>, 2> keyframes;
 				for (int d = 0; d < 2; d++)
 					keyframesManager->getKeyframe(d, keyframes[d]);
-				if (fnSegment(boost::static_pointer_cast<Frame>(keyframes[0])) && fnSegment(boost::static_pointer_cast<Frame>(keyframes[1]))) {
+				if (fnSegment(boost::static_pointer_cast<Frame>(keyframes[0]))) {
 					// filter points using semantic id 
 					std::vector<SRef<CloudPoint>> pointCloud;
 					pointCloudManager->getAllPoints(pointCloud);
-					std::vector<uint32_t> ptsIdToRemove;
-					for (uint32_t i = 0; i < static_cast<uint32_t>(pointCloud.size()); i++) {
-						auto visibility = pointCloud[i]->getVisibility();
-						if (keyframes[0]->getUndistortedKeypoint(visibility[0]).getClassId() != keyframes[1]->getUndistortedKeypoint(visibility[1]).getClassId())
-							ptsIdToRemove.push_back(i);
-					}
-					LOG_INFO("Number of 3D points to remove after semantic id filtering: {}", ptsIdToRemove.size());
-					pointCloudManager->suppressPoints(ptsIdToRemove);
-					pointCloud.resize(0);
-					pointCloudManager->getAllPoints(pointCloud);
 					for (auto& pt : pointCloud) {
 						auto visibility = pt->getVisibility();
-						pt->setSemanticId(keyframes[0]->getUndistortedKeypoint(visibility[0]).getClassId());
+						int classId = keyframes[0]->getUndistortedKeypoint(visibility[0]).getClassId();
+						pt->setSemanticId(classId);
+						keyframes[1]->updateKeypointClassId(visibility[1], classId);
 					}
 					bootstrapOk = true;
 				}
