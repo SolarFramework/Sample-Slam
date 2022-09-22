@@ -190,6 +190,7 @@ private:
 	float												m_minWeightNeighbor;
 	float												m_reprojErrorThreshold;
     datastructure::CameraParameters                     m_camParams;
+    uint32_t                                            m_camParamsID;
 	double												m_bundleReprojError;
 
 	xpcf::DropBuffer< SRef<datastructure::Image>>		m_CameraImagesBuffer;	

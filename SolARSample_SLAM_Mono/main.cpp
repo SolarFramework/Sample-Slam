@@ -29,6 +29,7 @@
 #include "api/reloc/IKeyframeRetriever.h"
 #include "api/storage/ICovisibilityGraphManager.h"
 #include "api/storage/IKeyframesManager.h"
+#include "api/storage/ICameraParametersManager.h"
 #include "api/storage/IPointCloudManager.h"
 #include "api/loop/ILoopClosureDetector.h"
 #include "api/loop/ILoopCorrector.h"
@@ -76,6 +77,7 @@ int main(int argc, char **argv) {
 		auto camera = xpcfComponentManager->resolve<input::devices::ICamera>();
 		auto pointCloudManager = xpcfComponentManager->resolve<IPointCloudManager>();
 		auto keyframesManager = xpcfComponentManager->resolve<IKeyframesManager>();
+        auto cameraParametersManager = xpcfComponentManager->resolve<ICameraParametersManager>();
 		auto covisibilityGraphManager = xpcfComponentManager->resolve<ICovisibilityGraphManager>();
 		auto keyframeRetriever = xpcfComponentManager->resolve<IKeyframeRetriever>();
 		auto mapManager = xpcfComponentManager->resolve<IMapManager>();      
@@ -166,6 +168,10 @@ int main(int argc, char **argv) {
 		int count = 0;
 		int countNewKeyframes = 0;		
 		start = clock();
+
+        cameraParametersManager->addCameraParameters(camParams);
+        uint32_t cameraID = camParams.id;
+
 		while (true)
 		{
             SRef<Image>											view, displayImage;
@@ -181,8 +187,7 @@ int main(int argc, char **argv) {
 				continue;
 			// undistort keypoints
 			undistortKeypoints->undistort(keypoints, camParams, undistortedKeypoints);
-            frame = xpcf::utils::make_shared<Frame>(keypoints, undistortedKeypoints, descriptors, view);
-			frame->setCameraParameters(camParams);
+            frame = xpcf::utils::make_shared<Frame>(keypoints, undistortedKeypoints, descriptors, view, cameraID);
 			// check bootstrap
 			if (!bootstrapOk) {
 				Transform3Df pose;
@@ -249,7 +254,7 @@ int main(int argc, char **argv) {
 			}
 			// draw cube
 			if (!frame->getPose().isApprox(Transform3Df::Identity()))
-				overlay3D->draw(frame->getPose(), frame->getCameraParameters(), displayImage);
+                overlay3D->draw(frame->getPose(), camParams, displayImage);
 			// display matches and a cube on the origin of coordinate system
 			if (imageViewer->display(displayImage) == FrameworkReturnCode::_STOP)
 				break;	
