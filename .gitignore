@@ -16,6 +16,7 @@ build/
 *.o
 *.obj
 **/.build-rules/
+deploy
 
 # Precompiled Headers
 *.gch

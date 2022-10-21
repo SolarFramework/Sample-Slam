@@ -269,8 +269,8 @@
 			<property name="delayTime" type="int" value="30"/>
 		</configure>
 		<configure component="SolARVideoAsCameraOpencv">
-			<property name="calibrationFile" type="string" value="../../../../data/tum_camera_calibration.json"/>
-			<property name="videoPath" type="string" value="../../../../data/rgbd_dataset_freiburg3_long_office_household_validation-rgb.avi"/>
+			<property name="calibrationFile" type="string" value="../../../../../data/tum_camera_calibration.json"/>
+			<property name="videoPath" type="string" value="../../../../../data/rgbd_dataset_freiburg3_long_office_household_validation-rgb.avi"/>
 			<property name="delayTime" type="int" value="50"/>
 		</configure>
 		<configure component="SolARSLAMBootstrapper">
@@ -357,7 +357,7 @@
 			<property name="minMeanDistanceIsKeyframe" type="float" value="0.05"/>			
 		</configure>
 		<configure component="SolARKeyframeRetrieverFBOW">
-			<property name="VOCpath" type="String" value="../../../../data/akaze.fbow"/>
+			<property name="VOCpath" type="String" value="../../../../../data/akaze.fbow"/>
 			<property name="threshold" type="float" value="0.01"/>
 			<property name="level" type="int" value="3"/>
 			<property name="matchingDistanceRatio" type="float" value="0.8"/>
