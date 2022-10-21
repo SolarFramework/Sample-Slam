@@ -19,30 +19,30 @@ echo "**** Bundle dependencies in bin folder"
  FOR /D /R %%d IN (SolARSample*) DO (
     For %%f IN (%%~fd\*_conf.xml) DO (
       echo "** Bundle sample configuration file %%f"
-      remaken bundleXpcf "%%f" -d ./bin/x86_64/shared/release -s modules
-      remaken bundleXpcf "%%f" -d ./bin/x86_64/shared/debug -s modules -c debug
+      remaken bundleXpcf "%%f" -d ./deploy/bin/x86_64/shared/release -s modules
+      remaken bundleXpcf "%%f" -d ./deploy/bin/x86_64/shared/debug -s modules -c debug
    )
 )
 
 FOR /D /R %%d IN (SolARPipeline*) DO (
    For %%f IN (%%~fd\*_conf.xml) DO (
       echo "** Bundle sample configuration file %%f"
-      remaken bundleXpcf "%%f" -d ./bin/x86_64/shared/release -s modules
-      remaken bundleXpcf "%%f" -d ./bin/x86_64/shared/debug -s modules -c debug
+      remaken bundleXpcf "%%f" -d ./deploy/bin/x86_64/shared/release -s modules
+      remaken bundleXpcf "%%f" -d ./deploy/bin/x86_64/shared/debug -s modules -c debug
    )
 )
 
 
 echo "**** Zip bundles"
-"7z.exe" a -tzip bin\%filename%_debug.zip README.md
-"7z.exe" a -tzip bin\%filename%_release.zip README.md
-"7z.exe" a -tzip bin\%filename%_debug.zip LICENSE
-"7z.exe" a -tzip bin\%filename%_release.zip LICENSE
-"7z.exe" a -tzip bin\%filename%_debug.zip installData.bat
-"7z.exe" a -tzip bin\%filename%_release.zip installData.bat
-"7z.exe" a -tzip bin\%filename%_debug.zip bin\x86_64\shared\debug
-"7z.exe" a -tzip bin\%filename%_release.zip bin\x86_64\shared\release
-"7z.exe" a -tzip bin\%filename%_debug.zip data\tum_camera_calibration.json
-"7z.exe" a -tzip bin\%filename%_release.zip data\tum_camera_calibration.json
+"7z.exe" a -tzip deploy\%filename%_debug.zip README.md
+"7z.exe" a -tzip deploy\%filename%_release.zip README.md
+"7z.exe" a -tzip deploy\%filename%_debug.zip LICENSE
+"7z.exe" a -tzip deploy\%filename%_release.zip LICENSE
+"7z.exe" a -tzip deploy\%filename%_debug.zip installData.bat
+"7z.exe" a -tzip deploy\%filename%_release.zip installData.bat
+"7z.exe" a -tzip deploy\%filename%_debug.zip deploy\bin\x86_64\shared\debug
+"7z.exe" a -tzip deploy\%filename%_release.zip deploy\bin\x86_64\shared\release
+"7z.exe" a -tzip deploy\%filename%_debug.zip data\tum_camera_calibration.json
+"7z.exe" a -tzip deploy\%filename%_release.zip data\tum_camera_calibration.json
 
-"sh.exe" bundleDataConfigFiles.sh windows bin\%filename%_release.zip bin\%filename%_debug.zip
+"sh.exe" bundleDataConfigFiles.sh windows deploy\%filename%_release.zip deploy\%filename%_debug.zip
