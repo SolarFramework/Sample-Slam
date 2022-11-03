@@ -57,6 +57,12 @@ FrameworkReturnCode PipelineSlam::init()
     try {
         // get camera parameters
         m_camParams = m_camera->getParameters();
+
+        // add current camera parameters to the map manager
+        SRef<CameraParameters> camParams = xpcf::utils::make_shared<CameraParameters>(m_camParams);
+        m_mapManager->addCameraParameters(camParams);
+        m_camParamsID = camParams->id;
+
 		// get properties
 		m_minWeightNeighbor = m_mapping->bindTo<xpcf::IConfigurable>()->getProperty("minWeightNeighbor")->getFloatingValue();
 		m_reprojErrorThreshold = m_mapManager->bindTo<xpcf::IConfigurable>()->getProperty("reprojErrorThreshold")->getFloatingValue();
@@ -281,8 +287,7 @@ void PipelineSlam::getDescriptors()
 	SRef<datastructure::DescriptorBuffer> descriptors;
 	if (m_descriptorExtractor->extract(image, keypoints, descriptors) == FrameworkReturnCode::_SUCCESS) {
         m_undistortKeypoints->undistort(keypoints, m_camParams, undistortedKeypoints);
-		SRef<Frame> frame = xpcf::utils::make_shared<Frame>(keypoints, undistortedKeypoints, descriptors, image);
-        frame->setCameraParameters(m_camParams);
+        SRef<Frame> frame = xpcf::utils::make_shared<Frame>(keypoints, undistortedKeypoints, descriptors, image, m_camParamsID);
 		if (m_bootstrapOk)
 			m_frameBuffer.push(frame);
 		else

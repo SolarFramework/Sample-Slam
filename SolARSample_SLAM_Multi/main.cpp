@@ -30,6 +30,7 @@
 #include "api/reloc/IKeyframeRetriever.h"
 #include "api/storage/ICovisibilityGraphManager.h"
 #include "api/storage/IKeyframesManager.h"
+#include "api/storage/ICameraParametersManager.h"
 #include "api/storage/IPointCloudManager.h"
 #include "api/input/files/ITrackableLoader.h"
 #include "api/solver/pose/ITrackablePose.h"
@@ -78,7 +79,8 @@ int main(int argc, char **argv) {
 		LOG_INFO("Start creating components");
 		auto pointCloudManager = xpcfComponentManager->resolve<IPointCloudManager>();
 		auto keyframesManager = xpcfComponentManager->resolve<IKeyframesManager>();
-		auto covisibilityGraphManager = xpcfComponentManager->resolve<ICovisibilityGraphManager>();
+        auto cameraParametersManager = xpcfComponentManager->resolve<ICameraParametersManager>();
+        auto covisibilityGraphManager = xpcfComponentManager->resolve<ICovisibilityGraphManager>();
 		auto keyframeRetriever = xpcfComponentManager->resolve<IKeyframeRetriever>();
 		auto mapManager = xpcfComponentManager->resolve<IMapManager>();
 		auto camera = xpcfComponentManager->resolve<input::devices::ICamera>();
@@ -105,6 +107,9 @@ int main(int argc, char **argv) {
 		// get properties
 		float minWeightNeighbor = mapping->bindTo<xpcf::IConfigurable>()->getProperty("minWeightNeighbor")->getFloatingValue();
 		float reprojErrorThreshold = mapManager->bindTo<xpcf::IConfigurable>()->getProperty("reprojErrorThreshold")->getFloatingValue();
+
+        cameraParametersManager->addCameraParameters(camParams);
+        uint32_t cameraID = camParams.id;
 
 		if (camera->start() != FrameworkReturnCode::_SUCCESS)
 		{
@@ -212,8 +217,7 @@ int main(int argc, char **argv) {
 			SRef<DescriptorBuffer> descriptors;
 			if (descriptorExtractor->extract(image, keypoints, descriptors) == FrameworkReturnCode::_SUCCESS) {
 				undistortKeypoints->undistort(keypoints, camParams, undistortedKeypoints);
-				SRef<Frame> frame = xpcf::utils::make_shared<Frame>(keypoints, undistortedKeypoints, descriptors, image);
-				frame->setCameraParameters(camParams);
+                SRef<Frame> frame = xpcf::utils::make_shared<Frame>(keypoints, undistortedKeypoints, descriptors, image, cameraID);
 				if (bootstrapOk)
 					m_dropBufferFrameTracking.push(frame);
 				else
@@ -231,7 +235,7 @@ int main(int argc, char **argv) {
 			}
 			SRef<Image> view;
 			Transform3Df pose = Transform3Df::Identity();
-			fiducialMarkerPoseEstimator->estimate(frame->getView(), frame->getCameraParameters(), pose);
+            fiducialMarkerPoseEstimator->estimate(frame->getView(), camParams, pose);
 			frame->setPose(pose);
 			if (bootstrapper->process(frame, view) == FrameworkReturnCode::_SUCCESS) {
 				double bundleReprojError = bundler->bundleAdjustment();
@@ -243,7 +247,7 @@ int main(int argc, char **argv) {
 				bootstrapOk = true;
 			}
 			if (!pose.isApprox(Transform3Df::Identity()))
-				overlay3D->draw(pose, frame->getCameraParameters(), view);
+                overlay3D->draw(pose, camParams, view);
 			m_dropBufferDisplay.push(view);
 		};
 
@@ -261,7 +265,7 @@ int main(int argc, char **argv) {
 				// used for display
 				framePoses.push_back(frame->getPose());
 				// draw cube
-				overlay3D->draw(frame->getPose(), frame->getCameraParameters(), displayImage);
+                overlay3D->draw(frame->getPose(), camParams, displayImage);
 				// send frame to mapping task
 				if (isMappingIdle && isLoopIdle && tracking->checkNeedNewKeyframe())
 					m_dropBufferAddKeyframe.push(frame);
