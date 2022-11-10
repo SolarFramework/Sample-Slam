@@ -1,4 +1,7 @@
 #!/bin/bash
+
+set -e
+
 Version="1.0.0"
 
 if [ -z "$1" ]
