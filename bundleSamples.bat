@@ -32,15 +32,15 @@ FOR /D /R %%d IN (SolARPipeline*) DO (
 
 
 echo "**** Zip bundles"
-("7z.exe" a -tzip deploy\%filename%_debug.zip README.md && ^
-"7z.exe" a -tzip deploy\%filename%_release.zip README.md && ^
-"7z.exe" a -tzip deploy\%filename%_debug.zip LICENSE && ^
-"7z.exe" a -tzip deploy\%filename%_release.zip LICENSE && ^
-"7z.exe" a -tzip deploy\%filename%_debug.zip installData.bat && ^
-"7z.exe" a -tzip deploy\%filename%_release.zip installData.bat && ^
-"7z.exe" a -tzip deploy\%filename%_debug.zip deploy\bin\x86_64\shared\debug && ^
-"7z.exe" a -tzip deploy\%filename%_release.zip deploy\bin\x86_64\shared\release && ^
-"7z.exe" a -tzip deploy\%filename%_debug.zip data\tum_camera_calibration.json && ^
-"7z.exe" a -tzip deploy\%filename%_release.zip data\tum_camera_calibration.json) || (echo "Error: could not create bundle archive" && EXIT /B 1)
+("7z.exe" a -tzip deploy\%filename%_debug.zip README.md ^
+ && "7z.exe" a -tzip deploy\%filename%_release.zip README.md ^
+ && "7z.exe" a -tzip deploy\%filename%_debug.zip LICENSE ^
+ && "7z.exe" a -tzip deploy\%filename%_release.zip LICENSE ^
+ && "7z.exe" a -tzip deploy\%filename%_debug.zip installData.bat ^
+ && "7z.exe" a -tzip deploy\%filename%_release.zip installData.bat ^
+ && "7z.exe" a -tzip deploy\%filename%_debug.zip deploy\bin\x86_64\shared\debug ^
+ && "7z.exe" a -tzip deploy\%filename%_release.zip deploy\bin\x86_64\shared\release ^
+ && "7z.exe" a -tzip deploy\%filename%_debug.zip data\tum_camera_calibration.json ^
+ && "7z.exe" a -tzip deploy\%filename%_release.zip data\tum_camera_calibration.json) || (echo "Error: could not create bundle archive" && EXIT /B 1)
 
 "sh.exe" bundleDataConfigFiles.sh windows deploy\%filename%_release.zip deploy\%filename%_debug.zip || (echo "Error: could not bundle data config" && EXIT /B 1)
