@@ -1,4 +1,4 @@
-build/
+*build*
 
 *.pro.user
 
@@ -16,6 +16,7 @@ build/
 *.o
 *.obj
 **/.build-rules/
+deploy
 
 # Precompiled Headers
 *.gch

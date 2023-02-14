@@ -189,8 +189,8 @@ private:
 	int													m_countNewKeyframes = 0;
 	float												m_minWeightNeighbor;
 	float												m_reprojErrorThreshold;
-	datastructure::CamCalibration                       m_calibration;
-	datastructure::CamDistortion                        m_distortion;
+    datastructure::CameraParameters                     m_camParams;
+    uint32_t                                            m_camParamsID;
 	double												m_bundleReprojError;
 
 	xpcf::DropBuffer< SRef<datastructure::Image>>		m_CameraImagesBuffer;	

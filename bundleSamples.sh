@@ -1,4 +1,7 @@
 #!/bin/bash
+
+set -e
+
 Version="1.0.0"
 
 if [ -z "$1" ]
@@ -16,17 +19,17 @@ echo "**** Bundle dependencies in bin folder"
 for file in $(find ./SolARSample* ./SolARPipeline*/tests/SolARPipelineTest* -path "*_conf.xml")
 do
    echo "install dependencies for config file: $file"
-   remaken bundleXpcf $file -d ./bin/x86_64/shared/release -s modules
-   remaken bundleXpcf $file -d ./bin/x86_64/shared/debug -s modules -c debug
+   remaken bundleXpcf --recurse -d ./deploy/bin/x86_64/shared/release -s modules $file
+   remaken bundleXpcf --recurse -d ./deploy/bin/x86_64/shared/debug -s modules -c debug $file
 done
 
 cp ./runFromBundle.sh ./run.sh
-mv ./run.sh ./bin/x86_64/shared/release/
+mv ./run.sh ./deploy/bin/x86_64/shared/release/
 cp ./runFromBundle.sh ./run.sh
-mv ./run.sh ./bin/x86_64/shared/debug
+mv ./run.sh ./deploy/bin/x86_64/shared/debug
 
 
-zip --symlinks -r "./bin/${filename}_release.zip" ./bin/x86_64/shared/release ./README.md ./installData.sh ./LICENSE data/SolARPipelineTest_SLAM_TUM_conf.xml data/SolARSample_SLAM_TUM_conf.xml data/tum_camera_calibration.json
-zip --symlinks -r "./bin/${filename}_debug.zip" ./bin/x86_64/shared/debug ./README.md ./installData.sh ./LICENSE data/SolARPipelineTest_SLAM_TUM_conf.xml data/SolARSample_SLAM_TUM_conf.xml data/tum_camera_calibration.json
+zip --symlinks -r "./deploy/${filename}_release.zip" ./deploy/bin/x86_64/shared/release ./README.md ./installData.sh ./LICENSE data/SolARPipelineTest_SLAM_TUM_conf.xml data/SolARSample_SLAM_TUM_conf.xml data/tum_camera_calibration.json
+zip --symlinks -r "./deploy/${filename}_debug.zip" ./deploy/bin/x86_64/shared/debug ./README.md ./installData.sh ./LICENSE data/SolARPipelineTest_SLAM_TUM_conf.xml data/SolARSample_SLAM_TUM_conf.xml data/tum_camera_calibration.json
 
-./bundleDataConfigFiles.sh linux "./bin/${filename}_release.zip" "./bin/${filename}_debug.zip"
+./bundleDataConfigFiles.sh linux "./deploy/${filename}_release.zip" "./deploy/${filename}_debug.zip"
