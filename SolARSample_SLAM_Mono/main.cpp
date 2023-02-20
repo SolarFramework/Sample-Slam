@@ -21,6 +21,7 @@
 #include "core/Log.h"
 // ADD COMPONENTS HEADERS HERE
 #include "api/input/devices/ICamera.h"
+#include "api/input/devices/IARDevice.h"
 #include "api/features/IDescriptorsExtractorFromImage.h"
 #include "api/storage/IMapManager.h"
 #include "api/display/I3DOverlay.h"
@@ -101,6 +102,7 @@ int main(int argc, char **argv) {
 		auto bootstrapper = xpcfComponentManager->resolve<slam::IBootstrapper>();
 		auto tracking = xpcfComponentManager->resolve<slam::ITracking>();
 		auto mapping = xpcfComponentManager->resolve<slam::IMapping>();
+        auto gArDevice = xpcfComponentManager->resolve<input::devices::IARDevice>();
 #ifdef SEMANTIC_ID
 		auto segmentor = xpcfComponentManager->resolve<segm::ISemanticSegmentation>();
 		auto maskOverlay = xpcfComponentManager->resolve<display::IMaskOverlay>();
@@ -124,7 +126,8 @@ int main(int argc, char **argv) {
 		LOG_INFO("Loaded all components");
 
 		// get camera parameters
-		CameraParameters camParams = camera->getParameters();		
+        CameraRigParameters camRigParams = gArDevice->getCameraParameters();
+        CameraParameters camParams = camRigParams.cameraParams[0];
 		LOG_DEBUG("Intrincic\Distortion parameters : \n{}\n\n{}", camParams.intrinsic, camParams.distortion);
 		// get properties
 		float minWeightNeighbor = mapping->bindTo<xpcf::IConfigurable>()->getProperty("minWeightNeighbor")->getFloatingValue();
