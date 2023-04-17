@@ -42,8 +42,9 @@
 #include "api/slam/ITracking.h"
 #include "api/slam/IMapping.h"
 
-// if defined will assign class id to key point  
+// if macro defined will launch semantic segmentation also  
 //#define SEMANTIC_ID
+
 #ifdef SEMANTIC_ID
 #include "api/segm/ISemanticSegmentation.h"
 #include "api/display/IMaskOverlay.h"
@@ -102,7 +103,7 @@ int main(int argc, char **argv) {
 		auto bootstrapper = xpcfComponentManager->resolve<slam::IBootstrapper>();
 		auto tracking = xpcfComponentManager->resolve<slam::ITracking>();
 		auto mapping = xpcfComponentManager->resolve<slam::IMapping>();
-        auto gArDevice = xpcfComponentManager->resolve<input::devices::IARDevice>();
+		auto gArDevice = xpcfComponentManager->resolve<input::devices::IARDevice>();
 #ifdef SEMANTIC_ID
 		auto segmentor = xpcfComponentManager->resolve<segm::ISemanticSegmentation>();
 		auto maskOverlay = xpcfComponentManager->resolve<display::IMaskOverlay>();
@@ -126,8 +127,8 @@ int main(int argc, char **argv) {
 		LOG_INFO("Loaded all components");
 
 		// get camera parameters
-        CameraRigParameters camRigParams = gArDevice->getCameraParameters();
-        CameraParameters camParams = camRigParams.cameraParams[0];
+		CameraRigParameters camRigParams = gArDevice->getCameraParameters();
+		CameraParameters camParams = camRigParams.cameraParams[0];
 		LOG_DEBUG("Intrincic\Distortion parameters : \n{}\n\n{}", camParams.intrinsic, camParams.distortion);
 		// get properties
 		float minWeightNeighbor = mapping->bindTo<xpcf::IConfigurable>()->getProperty("minWeightNeighbor")->getFloatingValue();
@@ -211,7 +212,7 @@ int main(int argc, char **argv) {
 			SRef<Keyframe>										keyframe;
 			// Get current image
 			if (camera->getNextImage(view) != FrameworkReturnCode::_SUCCESS)
-				break;    
+				break;
             // feature extraction
 			if (descriptorExtractorFromImage->extract(view, keypoints, descriptors) != FrameworkReturnCode::_SUCCESS)
 				continue;
@@ -268,7 +269,7 @@ int main(int argc, char **argv) {
 							covisibilityGraphManager->getNeighbors(keyframe->getId(), minWeightNeighbor, bestIdx, NB_LOCALKEYFRAMES);
 							bestIdx.push_back(keyframe->getId());
 							LOG_DEBUG("Nb keyframe to local bundle: {}", bestIdx.size());
-                            double bundleReprojError = bundler->bundleAdjustment(bestIdx);
+							double bundleReprojError = bundler->bundleAdjustment(bestIdx);
 							// local map pruning
 							std::vector<SRef<CloudPoint>> localPointCloud;
 							mapManager->getLocalPointCloud(keyframe, 1.0, localPointCloud);
@@ -292,15 +293,15 @@ int main(int argc, char **argv) {
 									countNewKeyframes = 0;
 									loopCorrector->correct(keyframe, detectedLoopKeyframe, sim3Transform, duplicatedPointsIndices);
 									// Loop optimisation
-                                    bundler->bundleAdjustment();
+									bundler->bundleAdjustment();
 									// map pruning
 									mapManager->pointCloudPruning();
 									mapManager->keyframePruning();
 								}
 							}
 
-							// update reference keyframe to tracking
-							tracking->setNewKeyframe(keyframe);
+						// update reference keyframe to tracking
+						tracking->setNewKeyframe(keyframe);
 						}
 					}
 				}				
@@ -308,9 +309,7 @@ int main(int argc, char **argv) {
 			
 			// draw cube
 			if (!frame->getPose().isApprox(Transform3Df::Identity()))
-			{
                 overlay3D->draw(frame->getPose(), camParams, displayImage);
-			}
 			// display matches and a cube on the origin of coordinate system
 			if (imageViewer->display(displayImage) == FrameworkReturnCode::_STOP)
 				break;	

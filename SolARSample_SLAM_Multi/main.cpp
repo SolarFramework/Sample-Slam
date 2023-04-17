@@ -42,8 +42,9 @@
 #include "api/slam/ITracking.h"
 #include "api/slam/IMapping.h"
 
-// IF SEMANTIC SEGMENTATION 
+// If macro defined will launch semantic segmentation also  
 //#define SEMANTIC_ID
+
 #ifdef SEMANTIC_ID
 #include "api/segm/ISemanticSegmentation.h"
 #include "api/display/IMaskOverlay.h"
@@ -244,7 +245,7 @@ int main(int argc, char **argv) {
 			if (descriptorExtractor->extract(image, keypoints, descriptors) == FrameworkReturnCode::_SUCCESS) {
 				// set keypoints' class id to -1 which means no semantic information
 				std::for_each(keypoints.begin(), keypoints.end(), [](auto& p) { p.setClassId(-1); });
-                undistortKeypoints->undistort(keypoints, camParams, undistortedKeypoints);
+				undistortKeypoints->undistort(keypoints, camParams, undistortedKeypoints);
                 SRef<Frame> frame = xpcf::utils::make_shared<Frame>(keypoints, undistortedKeypoints, descriptors, image, cameraID);
 				if (bootstrapOk)
 					m_dropBufferFrameTracking.push(frame);
