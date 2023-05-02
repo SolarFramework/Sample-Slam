@@ -46,8 +46,8 @@
 //#define SEMANTIC_ID
 
 #ifdef SEMANTIC_ID
-#include "api/segm/ISemanticSegmentation.h"
 #include "api/display/IMaskOverlay.h"
+#include "api/segm/ISemanticSegmentation.h"
 #endif
 
 #define NB_NEWKEYFRAMES_LOOP 10
@@ -117,7 +117,8 @@ int main(int argc, char **argv) {
 			for (int i = 0; i < static_cast<int>(frame->getKeypoints().size()); i++) {
 				int classId = static_cast<int>(mask->getPixel<uint8_t>(static_cast<int>(frame->getKeypoint(i).getY()),
 					static_cast<int>(frame->getKeypoint(i).getX())));
-				frame->updateKeypointClassId(i, classId);
+				if (!frame->updateKeypointClassId(i, classId))
+					return false;
 			}
 			SRef<Image> display2 = frame->getView()->copy();
 			maskOverlay->draw(display2, mask);
@@ -273,11 +274,14 @@ int main(int argc, char **argv) {
 				framePoses.push_back(keyframe2->getPose());
 				LOG_INFO("Number of initial point cloud: {}", pointCloudManager->getNbPoints());
 				LOG_INFO("Number of initial keyframes: {}", keyframesManager->getNbKeyframes());
+				bootstrapOk = true;
 #ifdef SEMANTIC_ID
 				std::array<SRef<Keyframe>, 2> keyframes;
 				for (int d = 0; d < 2; d++)
 					keyframesManager->getKeyframe(d, keyframes[d]);
-				if (fnSegment(boost::static_pointer_cast<Frame>(keyframes[0]))) {
+				if (!fnSegment(boost::static_pointer_cast<Frame>(keyframes[0]))) {
+					bootstrapOk = false;
+				} else {
 					// filter points using semantic id 
 					std::vector<SRef<CloudPoint>> pointCloud;
 					pointCloudManager->getAllPoints(pointCloud);
@@ -287,10 +291,7 @@ int main(int argc, char **argv) {
 						pt->setSemanticId(classId);
 						keyframes[1]->updateKeypointClassId(visibility[1], classId);
 					}
-					bootstrapOk = true;
-				}
-#else
-				bootstrapOk = true;
+				}				
 #endif
 			}
 			if (!pose.isApprox(Transform3Df::Identity()))

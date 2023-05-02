@@ -46,8 +46,8 @@
 //#define SEMANTIC_ID
 
 #ifdef SEMANTIC_ID
-#include "api/segm/ISemanticSegmentation.h"
 #include "api/display/IMaskOverlay.h"
+#include "api/segm/ISemanticSegmentation.h"
 #endif
 
 #define NB_NEWKEYFRAMES_LOOP 10
