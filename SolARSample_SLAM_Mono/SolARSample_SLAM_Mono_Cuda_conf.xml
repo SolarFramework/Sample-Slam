@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
 <xpcf-registry autoAlias="true">  
-	<module uuid="15e1990b-86b2-445c-8194-0cbe80ede970" name="SolARModuleOpenCV" description="SolARModuleOpenCV" path="$XPCF_MODULE_ROOT/SolARBuild/SolARModuleOpenCV/1.0.0/lib/x86_64/shared">
+	<module uuid="fde83ee6-3e22-4531-9e1c-54cb0a3bf3fa" name="SolARModuleOpenCVCuda" description="SolARModuleOpenCVCuda" path="$XPCF_MODULE_ROOT/SolARBuild/SolARModuleOpenCVCuda/1.0.0/lib/x86_64/shared">
 		<component uuid="5B7396F4-A804-4F3C-A0EB-FB1D56042BB4" name="SolARCameraOpencv" description="SolARCameraOpencv">
 			<interface uuid="125f2007-1bf9-421d-9367-fbdc1210d006" name="IComponentIntrospect" description="IComponentIntrospect"/>
 			<interface uuid="5DDC7DF0-8377-437F-9C81-3643F7676A5B" name="ICamera" description="ICamera"/>
@@ -12,6 +12,10 @@
 		<component uuid="fa4a780a-9720-11e8-9eb6-529269fb1459" name="SolARVideoAsCameraOpencv" description="SolARVideoAsCameraOpencv">
 			<interface uuid="125f2007-1bf9-421d-9367-fbdc1210d006" name="IComponentIntrospect" description="IComponentIntrospect"/>
 			<interface uuid="5DDC7DF0-8377-437F-9C81-3643F7676A5B" name="ICamera" description="ICamera"/>
+		</component>
+		<component uuid="4b5576c1-4c44-4835-a405-c8de2d4f85b0" name="SolARDeviceDataLoader" description="SolARDeviceDataLoader">
+			<interface uuid="125f2007-1bf9-421d-9367-fbdc1210d006" name="IComponentIntrospect" description="IComponentIntrospect"/>
+			<interface uuid="999085e6-1d11-41a5-8cca-3daf4e02e941" name="IARDevice" description="IARDevice"/>
 		</component>
 		<component uuid="e81c7e4e-7da6-476a-8eba-078b43071272" name="SolARKeypointDetectorOpencv" description="SolARKeypointDetectorOpencv">
 			<interface uuid="125f2007-1bf9-421d-9367-fbdc1210d006" name="IComponentIntrospect" description="IComponentIntrospect"/>
@@ -136,7 +140,7 @@
 		<component uuid="ddae46ca-1657-4301-a87d-f2dcfa6265d0" name="SolARCornerRefinementOpencv" description="SolARCornerRefinementOpencv">
 			<interface uuid="125f2007-1bf9-421d-9367-fbdc1210d006" name="IComponentIntrospect" description="IComponentIntrospect"/>
 			<interface uuid="6ed0413a-751e-4c33-b91b-97b3ea949bc2" name="ICornerRefinement" description="ICornerRefinement"/>
-		</component>
+		</component> 
 		<component uuid="77a8b776-6b0c-4bc0-b0a8-437a796b8e29" name="SolARFCNSegmentationOpencv" description="SolARFCNSegmentationOpencv">
 			<interface uuid="125f2007-1bf9-421d-9367-fbdc1210d006" name="IComponentIntrospect" description="IComponentIntrospect"/>
 			<interface uuid="2fd30b7c-c6e4-4af7-a711-0b69964e68c2" name="ISemanticSegmentation" description="ISemanticSegmentation"/>
@@ -241,12 +245,12 @@
 			<interface uuid="125f2007-1bf9-421d-9367-fbdc1210d006" name="IComponentIntrospect" description="IComponentIntrospect"/>
 			<interface uuid="35b9bdb7-d23c-4909-984f-ae7f9a292e6c" name="IBundler" description="IBundler"/>
 		</component>
-	</module>
+	</module>	
 
 	<factory>
 		<bindings>
-			<bind interface="ICamera" to="SolARCameraOpencv"/>
-			<!--bind interface="ICamera" to="SolARImagesAsCameraOpencv"/-->
+			<!--bind interface="ICamera" to="SolARCameraOpencv"/-->
+			<bind interface="ICamera" to="SolARImagesAsCameraOpencv"/>
 			<!--bind interface="ICamera" to="SolARVideoAsCameraOpencv"/-->
 			<bind interface="IDescriptorMatcher" to="SolARDescriptorMatcherKNNOpencv" />
 			<bind interface="IBundler" to="SolAROptimizationG2O"/>
@@ -265,34 +269,39 @@
 		</bindings>
 		<injects>
 			<inject to="SolARFiducialMarkerPoseEstimator">
-			<bind interface="IDescriptorMatcher" to="SolARDescriptorMatcherRadiusOpencv"/>				
-			<bind interface="IImageFilter" to="SolARImageFilterBinaryOpencv"/>
+				<bind interface="IDescriptorMatcher" to="SolARDescriptorMatcherRadiusOpencv"/>				
+				<bind interface="IImageFilter" to="SolARImageFilterBinaryOpencv"/>
 			</inject>			
 			<inject to="SolARDescriptorsExtractorFromImageOpencv">
-			<bind interface="IKeypointDetector" to="SolARKeypointDetectorOpencv"/>
-			<bind interface="IDescriptorsExtractor" to="SolARDescriptorsExtractorAKAZE2Opencv"/>
+				<bind interface="IKeypointDetector" to="SolARKeypointDetectorOpencv"/>
+				<bind interface="IDescriptorsExtractor" to="SolARDescriptorsExtractorAKAZE2Opencv"/>
 			</inject>			
 			<inject to="SolARSLAMTracking">
-			<bind interface="I2DOverlay" to="SolAR2DOverlayOpencv" name="Green" properties="GreenProperties"/>
-			<bind interface="I2DOverlay" to="SolAR2DOverlayOpencv" name="Red" properties="RedProperties"/>
+				<bind interface="I2DOverlay" to="SolAR2DOverlayOpencv" name="Green" properties="GreenProperties"/>
+				<bind interface="I2DOverlay" to="SolAR2DOverlayOpencv" name="Red" properties="RedProperties"/>
 			</inject>
 		</injects>
 	</factory>
 
 	<properties>
 		<configure component="SolARCameraOpencv">
-			<property name="calibrationFile" type="string" value="../../../../data/camera_calibration.json"/>
-			<property name="deviceID" type="uint" value="1"/>
+			<property name="calibrationFile" type="string" value="../../../../../data/tum_camera_calibration.json"/>
+			<property name="deviceID" type="uint" value="0"/>
 		</configure>
 		<configure component="SolARImagesAsCameraOpencv">
-			<property name="calibrationFile" type="string" value="path to calibration file"/>
-			<property name="imagesDirectoryPath" type="string" value="path to image directory"/>
+			<property name="calibrationFile" type="string" value="../../../../../data/calibration.json"/>
+			<property name="imagesDirectoryPath" type="string" value="../../../../../data/loop_desktop_A/000/%08d.jpg"/>
 			<property name="delayTime" type="int" value="30"/>
 		</configure>
 		<configure component="SolARVideoAsCameraOpencv">
-			<property name="calibrationFile" type="string" value="../../../../data/camera_calibration.json"/>
-			<property name="videoPath" type="string" value="../../../../data/logitech_data1.avi"/>
-			<property name="delayTime" type="Integer" value="30"/>
+			<property name="calibrationFile" type="string" value="../../../../../data/tum_camera_calibration.json"/>
+			<property name="videoPath" type="string" value="../../../../../data/rgbd_dataset_freiburg3_long_office_household_validation-rgb.avi"/>
+			<property name="delayTime" type="int" value="30"/>
+		</configure>
+		<configure component="SolARDeviceDataLoader">
+			<property name="calibrationFile" type="string" value="../../../../../data/hololens_calibration.json"/>
+			<property name="pathToData" type="string" value="path to data "/>
+			<property name="delayTime" type="int" value="50"/>
 		</configure>
 		<configure component="SolARSLAMBootstrapper">
 			<property name="hasPose" type="int" value="1"/>
@@ -303,9 +312,9 @@
 			<property name="minWeightNeighbor" type="float" value="20.0"/>
 			<property name="displayTrackedPoints" type="int" value="1"/>
 			<property name="thresAngleViewDirection" type="float" value="0.87"/>
-			<property name="nbPassedFrameAtLeast" type="int" value="10"/>
+			<property name="nbPassedFrameAtLeast" type="int" value="1"/>
 			<property name="ratioCPRefKeyframe" type="float" value="0.6"/>
-			<property name="minTrackedPoints" type="int" value="200"/>
+			<property name="minTrackedPoints" type="int" value="100"/>
 		</configure>
 		<configure component="SolARSLAMMapping">
 			<property name="minWeightNeighbor" type="float" value="20.0"/>
@@ -313,7 +322,7 @@
 			<property name="saveImage" type="int" value="0"/>
 		</configure>
 		<configure component="SolARMapManager">
-			<property name="directory" type="string" value="output/sample-multi-map"/>
+			<property name="directory" type="string" value="output/sample-mono-map"/>
 			<property name="identificationFileName" type="string" value="identification.bin"/>
 			<property name="coordinateFileName" type="string" value="coordinate.bin"/>
 			<property name="pointCloudManagerFileName" type="string" value="pointcloud.bin"/>
@@ -326,13 +335,13 @@
 		</configure>
 		<configure component="SolARKeypointDetectorOpencv">
 			<property name="type" type="string" value="AKAZE2"/>
-			<property name="imageRatio" type="float" value="1.0"/>
+			<property name="imageRatio" type="float" value="0.5"/>
 			<property name="nbDescriptors" type="int" value="2000"/>
 			<property name="threshold" type="float" value="0.0001"/>
-		</configure>
+		</configure>		
 		<configure component="SolARDescriptorsExtractorAKAZE2Opencv">
 			<property name="threshold" type="float" value="3e-4"/>
-		</configure>
+		</configure>		
 		<configure component="SolARDescriptorMatcherKNNOpencv">
 			<property name="distanceRatio" type="float" value="0.8"/>
 		</configure>
@@ -362,11 +371,11 @@
 			<property name="epilinesDistance" type="float" value="3.0"/>
 		</configure>
 		<configure component="SolARPoseEstimationSACPnpOpencv">
+			<property name="method" type="string" value="USAC MAGSAC"/>
 			<property name="iterationsCount" type="int" value="500"/>
 			<property name="reprojError" type="float" value="3.0"/>
 			<property name="confidence" type="float" value="0.99"/>
 			<property name="minNbInliers" type="int" value="25"/>
-			<property name="method" type="String" value="EPNP"/>
 		</configure>
 		<configure component="SolARMapFilter">
 			<property name="reprojErrorThreshold" type="float" value="3.0"/>
@@ -402,8 +411,8 @@
 				<value>255</value>
 				<value>0</value>
 			</property>
-			</configure>
-			<configure component="SolAR2DOverlayOpencv" name="RedProperties">
+		</configure>
+		<configure component="SolAR2DOverlayOpencv" name="RedProperties">
 			<property name="thickness" type="uint" value="1"/>
 			<property name="radius" type="uint" value="2"/>
 			<property name="color"  type="uint">
@@ -420,7 +429,7 @@
 				<value>255</value>
 				<value>0</value>
 			</property>
-			<property name="maxMatches" type="int" value="-1"/>
+		<property name="maxMatches" type="int" value="-1"/>
 		</configure>
 		<configure component="SolAROptimizationG2O">
 			<property name="nbIterationsLocal" type="int" value="10"/>
@@ -455,7 +464,7 @@
 				<value>0</value>
 			</property>
 			<property name="pointsColorFromClassLabel" type="uint" value="1"/>
-			<property name="classLabelColorMapPath" type="string" value="../../../../data/cocostuff164k-colors.txt"/>
+			<property name="classLabelColorMapPath" type="string" value="../../../../../data/cocostuff164k-colors.txt"/>
 			<property name="fixedPointsColor" type="uint" value="0"/>
 			<property name="pointsColor" type="uint">
 				<value>0</value>
@@ -488,7 +497,7 @@
 			<property name="exitKey" type="int" value="27"/>
 		</configure>
 		<configure component="SolARFiducialMarkerLoaderOpencv">
-			<property name="filePath" type="string" value="fiducialMarker.yml" description="Path of the .yml file describing the fiducial marker."/>
+			<property name="filePath" type="string" value="../../../../../data/fiducialMarkerA.yml" description="Path of the .yml file describing the fiducial marker."/>
 		</configure>
 		<configure component="SolARFiducialMarkerPoseEstimator">
 			<property name="nbThreshold" type="int" value="3"/>
@@ -530,10 +539,10 @@
 			</property>
 		</configure>
 		<configure component="SolARFCNSegmentationOpencv">
-			<property name="modelFile" type="string" value="../../../../data/fcn_resnet50.onnx"/>
+			<property name="modelFile" type="string" value="../../../../../data/fcn_resnet50.onnx"/>
 		</configure>
 		<configure component="SolARGenericSemanticSegmentationOpencv">
-			<property name="modelFile" type="string" value="../../../../data/pspnet_r50-d8_512x512_4x4_80k_coco-stuff164k_argmax_removed.onnx"/>
+			<property name="modelFile" type="string" value="../../../../../data/pspnet_r50-d8_512x512_4x4_80k_coco-stuff164k_argmax_removed.onnx"/>
 			<property name="argMaxRemoved" type="int" value="1"/>
 			<property name="mean" type="float" description="normalize input RGB image by subtracting mean">
 				<value>123.675</value>
@@ -551,8 +560,8 @@
 			</property>
 		</configure>
 		<configure component="SolARMaskOverlayOpencv">
-			<property name="classFile" type="string" value="../../../../data/cocostuff164k-classes.txt"/>
-			<property name="colorFile" type="string" value="../../../../data/cocostuff164k-colors.txt"/>
+			<property name="classFile" type="string" value="../../../../../data/cocostuff164k-classes.txt"/>
+			<property name="colorFile" type="string" value="../../../../../data/cocostuff164k-colors.txt"/>
 			<property name="otherClassColor" type="uint" description="in colorFile the RGB color that represents all other classes (one color for multiple unimportant classes)">
 				<value>255</value>
 				<value>255</value>
