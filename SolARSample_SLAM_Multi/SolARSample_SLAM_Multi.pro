@@ -81,6 +81,7 @@ android {
 
 config_files.path = $${TARGETDEPLOYDIR}
 config_files.files=$$files($${PWD}/SolARSample_SLAM_Multi_conf.xml)\
+                    $$files($${PWD}/SolARSample_SLAM_Multi_Cuda_conf.xml)\
                     $$files($${PWD}/camera_calibration.json)\
                     $$files($${PWD}/fiducialMarker.yml)\
                     $$files($${PWD}/FiducialMarker.gif)
