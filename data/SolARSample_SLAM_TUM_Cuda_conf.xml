@@ -206,12 +206,12 @@
 			<interface uuid="33db5a56-9be2-4e5a-8fdc-de25e1633cf6" name="IMapping" description="IMapping"/>
 		</component>
 	</module>	
-        <module uuid="b81f0b90-bdbc-11e8-a355-529269fb1459" name="SolARModuleFBOW" description="SolARModuleFBOW" path="$XPCF_MODULE_ROOT/SolARBuild/SolARModuleFBOW/1.0.0/lib/x86_64/shared">
-                <component uuid="9d1b1afa-bdbc-11e8-a355-529269fb1459" name="SolARKeyframeRetrieverFBOW" description="SolARKeyframeRetrieverFBOW">
-                        <interface uuid="125f2007-1bf9-421d-9367-fbdc1210d006" name="IComponentIntrospect" description="IComponentIntrospect"/>
-                        <interface uuid="f60980ce-bdbd-11e8-a355-529269fb1459" name="IKeyframeRetriever" description="IKeyframeRetriever"/>
-                </component>
-        </module>
+	<module uuid="b81f0b90-bdbc-11e8-a355-529269fb1459" name="SolARModuleFBOW" description="SolARModuleFBOW" path="$XPCF_MODULE_ROOT/SolARBuild/SolARModuleFBOW/1.0.0/lib/x86_64/shared">
+		<component uuid="9d1b1afa-bdbc-11e8-a355-529269fb1459" name="SolARKeyframeRetrieverFBOW" description="SolARKeyframeRetrieverFBOW">
+			<interface uuid="125f2007-1bf9-421d-9367-fbdc1210d006" name="IComponentIntrospect" description="IComponentIntrospect"/>
+			<interface uuid="f60980ce-bdbd-11e8-a355-529269fb1459" name="IKeyframeRetriever" description="IKeyframeRetriever"/>
+		</component>
+	</module>
 	<module uuid="8f94a3c5-79ed-4851-9502-98033eae3a3b" name="SolARModuleG2O" description="SolARModuleG2O" path="$XPCF_MODULE_ROOT/SolARBuild/SolARModuleG2O/1.0.0/lib/x86_64/shared">
 		<component uuid="870d89ba-bb5f-460a-a817-1fcb6473df70" name="SolAROptimizationG2O" description="SolAROptimizationG2O">
 			<interface uuid="125f2007-1bf9-421d-9367-fbdc1210d006" name="IComponentIntrospect" description="IComponentIntrospect"/>
@@ -272,9 +272,9 @@
 			<property name="delayTime" type="int" value="0"/>
 		</configure>
 		<configure component="SolARVideoAsCameraOpencv">
-                        <property name="calibrationFile" type="string" value="../../../../../data/tum_camera_calibration.json"/>
-                        <property name="videoPath" type="string" value="../../../../../data/rgbd_dataset_freiburg3_long_office_household_validation-rgb.avi"/>
-			<property name="delayTime" type="int" value="0"/>
+			<property name="calibrationFile" type="string" value="../../../../../data/tum_camera_calibration.json"/>
+			<property name="videoPath" type="string" value="../../../../../data/rgbd_dataset_freiburg3_long_office_household_validation-rgb.avi"/>
+			<property name="delayTime" type="int" value="30"/>
 		</configure>
 		<configure component="SolARSLAMBootstrapper">
 			<property name="hasPose" type="int" value="0"/>
@@ -358,7 +358,7 @@
 			<property name="epilinesDistance" type="float" value="3.0"/>
 		</configure>
 		<configure component="SolARPoseEstimationSACPnpOpencv">
-                        <property name="method" type="string" value="USAC_MAGSAC"/>
+			<property name="method" type="string" value="USAC_MAGSAC"/>
 			<property name="iterationsCount" type="int" value="500"/>
 			<property name="reprojError" type="float" value="3.0"/>
 			<property name="confidence" type="float" value="0.99"/>
@@ -376,8 +376,7 @@
 		</property>
 		</configure>
 		<configure component="SolARKeyframeRetrieverFBOW">
-                        <property name="VOCpath" type="String" value="../../../../../data/popsift_uint8.fbow"/>
-                        <!-- <property name="VOCpath" type="String" value="../../../../../data/akaze.fbow"/> -->
+			<property name="VOCpath" type="String" value="../../../../../data/popsift_uint8.fbow"/>
 			<property name="threshold" type="float" value="0.01"/>
 			<property name="level" type="int" value="3"/>
 			<property name="matchingDistanceRatio" type="float" value="0.8"/>
