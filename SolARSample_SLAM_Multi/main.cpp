@@ -42,6 +42,14 @@
 #include "api/slam/ITracking.h"
 #include "api/slam/IMapping.h"
 
+// If macro defined will launch semantic segmentation also  
+//#define SEMANTIC_ID
+
+#ifdef SEMANTIC_ID
+#include "api/display/IMaskOverlay.h"
+#include "api/segm/ISemanticSegmentation.h"
+#endif
+
 #define NB_NEWKEYFRAMES_LOOP 10
 #define NB_LOCALKEYFRAMES 10
 
@@ -50,7 +58,6 @@ using namespace SolAR::datastructure;
 using namespace SolAR::api;
 using namespace SolAR::api::storage;
 using namespace SolAR::api::reloc;
-
 
 namespace xpcf = org::bcom::xpcf;
 
@@ -77,15 +84,15 @@ int main(int argc, char **argv) {
 
 		// declare and create components
 		LOG_INFO("Start creating components");
+		auto camera = xpcfComponentManager->resolve<input::devices::ICamera>();
 		auto pointCloudManager = xpcfComponentManager->resolve<IPointCloudManager>();
 		auto keyframesManager = xpcfComponentManager->resolve<IKeyframesManager>();
         auto cameraParametersManager = xpcfComponentManager->resolve<ICameraParametersManager>();
         auto covisibilityGraphManager = xpcfComponentManager->resolve<ICovisibilityGraphManager>();
 		auto keyframeRetriever = xpcfComponentManager->resolve<IKeyframeRetriever>();
 		auto mapManager = xpcfComponentManager->resolve<IMapManager>();
-		auto camera = xpcfComponentManager->resolve<input::devices::ICamera>();
 		auto descriptorExtractor = xpcfComponentManager->resolve<features::IDescriptorsExtractorFromImage>();
-		auto imageViewer = xpcfComponentManager->resolve<display::IImageViewer>();
+		auto imageViewer = xpcfComponentManager->resolve<display::IImageViewer>("slam");
 		auto viewer3DPoints = xpcfComponentManager->resolve<display::I3DPointsViewer>();
         auto trackableLoader = xpcfComponentManager->resolve<input::files::ITrackableLoader>();
         auto fiducialMarkerPoseEstimator = xpcfComponentManager->resolve<solver::pose::ITrackablePose>();
@@ -98,6 +105,27 @@ int main(int argc, char **argv) {
 		auto bootstrapper = xpcfComponentManager->resolve<slam::IBootstrapper>();
 		auto tracking = xpcfComponentManager->resolve<slam::ITracking>();
 		auto mapping = xpcfComponentManager->resolve<slam::IMapping>();
+#ifdef SEMANTIC_ID
+		auto segmentor = xpcfComponentManager->resolve<segm::ISemanticSegmentation>();
+		auto maskOverlay = xpcfComponentManager->resolve<display::IMaskOverlay>();
+		auto imageViewer2 = xpcfComponentManager->resolve<display::IImageViewer>("segmentation");
+		xpcf::DropBuffer<SRef<Image>> m_dropBufferDisplay2;
+		auto fnSegment = [&segmentor, &maskOverlay, &m_dropBufferDisplay2] (SRef<Frame> frame) {
+			SRef<Image> mask;
+			if (segmentor->segment(frame->getView(), mask) != FrameworkReturnCode::_SUCCESS)
+				return false;
+			for (int i = 0; i < static_cast<int>(frame->getKeypoints().size()); i++) {
+				int classId = static_cast<int>(mask->getPixel<uint8_t>(static_cast<int>(frame->getKeypoint(i).getY()),
+					static_cast<int>(frame->getKeypoint(i).getX())));
+				if (!frame->updateKeypointClassId(i, classId))
+					return false;
+			}
+			SRef<Image> display2 = frame->getView()->copy();
+			maskOverlay->draw(display2, mask);
+			m_dropBufferDisplay2.push(display2);
+			return true;
+		};			
+#endif 
 		LOG_INFO("Loaded all components");
 
 		// get camera parameters
@@ -216,6 +244,8 @@ int main(int argc, char **argv) {
 			std::vector<Keypoint> keypoints, undistortedKeypoints;
 			SRef<DescriptorBuffer> descriptors;
 			if (descriptorExtractor->extract(image, keypoints, descriptors) == FrameworkReturnCode::_SUCCESS) {
+				// set keypoints' class id to -1 which means no semantic information
+				std::for_each(keypoints.begin(), keypoints.end(), [](auto& p) { p.setClassId(-1); });
 				undistortKeypoints->undistort(keypoints, camParams, undistortedKeypoints);
                 SRef<Frame> frame = xpcf::utils::make_shared<Frame>(keypoints, undistortedKeypoints, descriptors, image, cameraID);
 				if (bootstrapOk)
@@ -245,6 +275,24 @@ int main(int argc, char **argv) {
 				LOG_INFO("Number of initial point cloud: {}", pointCloudManager->getNbPoints());
 				LOG_INFO("Number of initial keyframes: {}", keyframesManager->getNbKeyframes());
 				bootstrapOk = true;
+#ifdef SEMANTIC_ID
+				std::array<SRef<Keyframe>, 2> keyframes;
+				for (int d = 0; d < 2; d++)
+					keyframesManager->getKeyframe(d, keyframes[d]);
+				if (!fnSegment(boost::static_pointer_cast<Frame>(keyframes[0]))) {
+					bootstrapOk = false;
+				} else {
+					// filter points using semantic id 
+					std::vector<SRef<CloudPoint>> pointCloud;
+					pointCloudManager->getAllPoints(pointCloud);
+					for (auto& pt : pointCloud) {
+						auto visibility = pt->getVisibility();
+						int classId = keyframes[0]->getUndistortedKeypoint(visibility[0]).getClassId();
+						pt->setSemanticId(classId);
+						keyframes[1]->updateKeypointClassId(visibility[1], classId);
+					}
+				}				
+#endif
 			}
 			if (!pose.isApprox(Transform3Df::Identity()))
                 overlay3D->draw(pose, camParams, view);
@@ -270,7 +318,6 @@ int main(int argc, char **argv) {
 				if (isMappingIdle && isLoopIdle && tracking->checkNeedNewKeyframe())
 					m_dropBufferAddKeyframe.push(frame);
 			}
-
 			m_dropBufferDisplay.push(displayImage);
 		};
 
@@ -282,6 +329,10 @@ int main(int argc, char **argv) {
 				xpcf::DelegateTask::yield();
 				return;
 			}
+#ifdef SEMANTIC_ID
+			if (!fnSegment(frame))
+				return;
+#endif
 			isMappingIdle = false;
 			SRef<Keyframe> keyframe;
 			if (mapping->process(frame, keyframe) == FrameworkReturnCode::_SUCCESS) {
@@ -372,6 +423,12 @@ int main(int argc, char **argv) {
 				if (!fnDisplay(framePoses))
 					stop = true;
 			}
+#ifdef SEMANTIC_ID
+			SRef<Image> displayImage2;
+			if (m_dropBufferDisplay2.tryPop(displayImage2))
+				if (imageViewer2->display(displayImage2) == SolAR::FrameworkReturnCode::_STOP)
+					stop = true;
+#endif
 			++count;
 		}
 
