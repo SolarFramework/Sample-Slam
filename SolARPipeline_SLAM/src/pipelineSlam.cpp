@@ -3,7 +3,7 @@
 #include "core/Log.h"
 
 // Declaration of the module embedding the Slam pipeline
-XPCF_DECLARE_MODULE("da89a6eb-3233-4dea-afdc-9d918be0bd74", "SlamModule", "The module embedding a pipeline to estimate the pose based on a multithreaded Slam")
+XPCF_DECLARE_MODULE("da89a6eb-3233-4dea-afdc-9d918be0bd74", "SolARPipelineSLAM", "The module embedding a pipeline to estimate the pose based on a multithreaded Slam")
 
 extern "C" XPCF_MODULEHOOKS_API xpcf::XPCFErrorCode XPCF_getComponent(const boost::uuids::uuid& componentUUID,SRef<xpcf::IComponentIntrospect>& interfaceRef)
 {
