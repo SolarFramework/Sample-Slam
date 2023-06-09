@@ -60,12 +60,6 @@ unix {
     QMAKE_POST_LINK += "make install install_deps"
 }
 
-macx {
-    QMAKE_MAC_SDK= macosx
-    QMAKE_CXXFLAGS += -fasm-blocks -x objective-c++
-    LIBS += -L/usr/local/lib
-}
-
 win32 {
     QMAKE_LFLAGS += /MACHINE:X64
     DEFINES += WIN64 UNICODE _UNICODE
