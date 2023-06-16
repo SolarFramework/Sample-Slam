@@ -6,9 +6,9 @@
 The SolAR **SLAM samples** show a SolAR pipeline for augmented reality based on a SLAM (Simultaneous Localization And Mapping).
 
 
-| ![](./SolARSample_SLAM_Multi/cube.jpg) ![](./SolARSample_SLAM_Multi/pointcloud.jpg) | ![](./SolARPipeline_SLAM/plugin.jpg) |
+| ![](./SolARPipeline_SLAM/tests/SolARPipelineTest_SLAM/cube.jpg) ![](./SolARPipeline_SLAM/tests/SolARPipelineTest_SLAM/pointcloud.jpg) | ![](./SolARPipeline_SLAM/plugin.jpg) |
 |:-:|:-:|
-| StandAlone/Multithread | Plugin | 
+| StandAlone | Plugin | 
 
 
 ## How to run
@@ -40,7 +40,7 @@ If you want to change the calibration parameters of the camera, edit the `camera
 SolAR SLAM supports two initialization modes: **fiducial marker based** or **markerless based**.
 
 * For **fiducial marker** based:
-	* SolAR SLAM samples require a fiducial marker to initialize. So you need to print the [Fiducial Marker](./SolARSample_SLAM_Mono/FiducialMarker.gif) and put it into the scene.
+	* SolAR SLAM samples require a fiducial marker to initialize. So you need to print the [Fiducial Marker](./SolARPipeline_SLAM/tests/SolARPipelineTest_SLAM/FiducialMarker.gif) and put it into the scene.
 
 	* If you want to change your fiducial marker, you can edit the `fiducialMarker.yml`.
 	
@@ -52,24 +52,6 @@ SolAR SLAM supports two initialization modes: **fiducial marker based** or **mar
 ### Run tests using a video file
 
 From the binary directory, run following command for testing SolAR SLAM:
-
-* For mono thread test:
-> #### Windows
->
-	SolARSample_SLAM_Mono.exe ..\..\data\SolARSample_SLAM_TUM_conf.xml
-
-> #### Linux
->
-	\.run.sh .\SolARSample_SLAM_Multi ..\..\data\SolARSample_SLAM_TUM_conf.xml
-
-* For multithreading test:
-> #### Windows
->
-	SolARSample_SLAM_Multi.exe ..\..\data\SolARSample_SLAM_TUM_conf.xml
-
-> #### Linux
->
-	\.run.sh .\SolARSample_SLAM_Multi ..\..\data\SolARSample_SLAM_TUM_conf.xml
 
 * For pipeline plugin test:
 > #### Windows
@@ -85,23 +67,6 @@ Press `escape` to quit the application.
 ### Run tests using a webcam
 
 Change the `deviceID` parameter in the configuration file to the corresponding ID of the camera that you use. From the binary directory, launch the execution for testing SolAR SLAM:
-* For mono thread test:
-> #### Windows
->
-	SolARSample_SLAM_Mono.exe
-
-> #### Linux
->
-	\.run.sh .\SolARSample_SLAM_Multi
-
-* For multithreading test:
-> #### Windows
->
-	SolARSample_SLAM_Multi.exe
-
-> #### Linux
->
-	\.run.sh .\SolARSample_SLAM_Multi
 
 * For pipeline plugin test:
 > #### Windows
@@ -112,14 +77,13 @@ Change the `deviceID` parameter in the configuration file to the corresponding I
 >
 	\.run.sh .\SolARPipelineTest_SLAM
 
-
 *  When the application is started, if you use the fiducial marker based initialization, point the camera to the fiducial marker (you can see a virtual cube on the marker). Otherwise, point the camera in front of the scene.
 
 * Then move the camera to initialize the SLAM (recommend moving horizontally). Note that for the fiducial marker based, make sure the fiducial marker is always in view of the camera. The initialization is successful when appearing green points in the image.
 
 * :warning: If the initialization is still not successful after a few seconds (This is normally due to texture-less scenes), you can add some objects into the scene and restart.
 
-* Now you can move the camera freely. The SolAR SLAM can track the camera pose and at the same time, you see in a dedicated window the 3D point cloud reconstructed by the SLAM (only for tests of mono and multi thread). Note that the fiducial marker is only used for the initialization, it can be removed from the scene later.
+* Now you can move the camera freely. The SolAR SLAM can track the camera pose and at the same time, you see in a dedicated window the 3D point cloud reconstructed by the SLAM. Note that the fiducial marker is only used for the initialization, it can be removed from the scene later.
 
 * :warning: In the case of lost tracking, you can return the camera to the previous views to relocalize camera pose instead of restarting.
 
