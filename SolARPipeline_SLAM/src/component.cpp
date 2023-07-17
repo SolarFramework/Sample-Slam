@@ -55,16 +55,13 @@ FrameworkReturnCode PipelineSlam::init()
 {    
     // component creation
     try {
-        // initialize components requiring the camera intrinsic and distortion parameters
-        m_calibration = m_camera->getIntrinsicsParameters();
-        m_distortion = m_camera->getDistortionParameters();
-		m_loopDetector->setCameraParameters(m_calibration, m_distortion);
-		m_loopCorrector->setCameraParameters(m_calibration, m_distortion);
-		m_fiducialMarkerPoseEstimator->setCameraParameters(m_calibration, m_distortion);
-		m_undistortKeypoints->setCameraParameters(m_calibration, m_distortion);
-		m_bootstrapper->setCameraParameters(m_calibration, m_distortion);
-		m_tracking->setCameraParameters(m_calibration, m_distortion);
-		m_mapping->setCameraParameters(m_camera->getParameters());
+        // get camera parameters
+        m_camParams = m_camera->getParameters();
+
+        // add current camera parameters to the map manager
+        SRef<CameraParameters> camParams = xpcf::utils::make_shared<CameraParameters>(m_camParams);
+        m_mapManager->addCameraParameters(camParams);
+        m_camParamsID = camParams->id;
 
 		// get properties
 		m_minWeightNeighbor = m_mapping->bindTo<xpcf::IConfigurable>()->getProperty("minWeightNeighbor")->getFloatingValue();
@@ -203,7 +200,7 @@ FrameworkReturnCode PipelineSlam::stop()
     }
     LOG_INFO("Pipeline has stopped: \n");
 	// run global BA before exit
-	m_globalBundler->bundleAdjustment(m_calibration, m_distortion);
+    m_globalBundler->bundleAdjustment();
 	// map pruning
 	m_mapManager->pointCloudPruning();
 	m_mapManager->keyframePruning();
@@ -264,10 +261,10 @@ void PipelineSlam::doBootStrap()
 	}
 	SRef<Image> view;
 	m_poseFrame = Transform3Df::Identity();
-	m_fiducialMarkerPoseEstimator->estimate(m_frame->getView(), m_poseFrame);
+    m_fiducialMarkerPoseEstimator->estimate(m_frame->getView(), m_camParams, m_poseFrame);
 	m_frame->setPose(m_poseFrame);
 	if (m_bootstrapper->process(m_frame, view) == FrameworkReturnCode::_SUCCESS) {
-		double bundleReprojError = m_bundler->bundleAdjustment(m_calibration, m_distortion);
+        double bundleReprojError = m_bundler->bundleAdjustment();
 		m_keyframesManager->getKeyframe(0, m_keyframe2);
 		m_tracking->setNewKeyframe(m_keyframe2);
 		m_bootstrapOk = true;
@@ -289,8 +286,8 @@ void PipelineSlam::getDescriptors()
 	std::vector<Keypoint> keypoints, undistortedKeypoints;
 	SRef<datastructure::DescriptorBuffer> descriptors;
 	if (m_descriptorExtractor->extract(image, keypoints, descriptors) == FrameworkReturnCode::_SUCCESS) {
-		m_undistortKeypoints->undistort(keypoints, undistortedKeypoints);
-		SRef<Frame> frame = xpcf::utils::make_shared<Frame>(keypoints, undistortedKeypoints, descriptors, image);
+        m_undistortKeypoints->undistort(keypoints, m_camParams, undistortedKeypoints);
+        SRef<Frame> frame = xpcf::utils::make_shared<Frame>(keypoints, undistortedKeypoints, descriptors, image, m_camParamsID);
 		if (m_bootstrapOk)
 			m_frameBuffer.push(frame);
 		else
@@ -334,7 +331,7 @@ void PipelineSlam::mapping()
 		m_covisibilityGraphManager->getNeighbors(keyframe->getId(), m_minWeightNeighbor, bestIdx, NB_LOCALKEYFRAMES);
 		bestIdx.push_back(keyframe->getId());
 		LOG_DEBUG("Nb keyframe to local bundle: {}", bestIdx.size());
-		double bundleReprojError = m_bundler->bundleAdjustment(m_calibration, m_distortion, bestIdx);
+        double bundleReprojError = m_bundler->bundleAdjustment(bestIdx);
 		// local map pruning
 		std::vector<SRef<CloudPoint>> localPointCloud;
 		m_mapManager->getLocalPointCloud(keyframe, 1.0, localPointCloud);
@@ -373,7 +370,7 @@ void PipelineSlam::loopClosure()
 		m_countNewKeyframes = 0;
 		m_loopCorrector->correct(lastKeyframe, detectedLoopKeyframe, sim3Transform, duplicatedPointsIndices);		
 		// Loop optimisation
-		m_globalBundler->bundleAdjustment(m_calibration, m_distortion);
+        m_globalBundler->bundleAdjustment();
 		// map pruning
 		m_mapManager->pointCloudPruning();
 		m_mapManager->keyframePruning();
